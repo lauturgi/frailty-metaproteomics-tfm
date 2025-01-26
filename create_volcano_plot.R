@@ -23,11 +23,11 @@ create_volcano_plot <- function(diff, sig = 0.05, fold = 0.7,
     ylab("-log10 adjusted p-value") +
     labs(title = title) +
     theme(
-      axis.title.x = element_text(colour = "black", size = 18),
-      axis.title.y = element_text(colour = "black", size = 18),
-      title = element_text(colour = "black", size = 18),
-      axis.text.x = element_text(colour = "black", size = 18),
-      axis.text.y = element_text(colour = "black", size = 18),
+      axis.title.x = element_text(colour = "black", size = 10),
+      axis.title.y = element_text(colour = "black", size = 10),
+      title = element_text(colour = "black", size = 10),
+      axis.text.x = element_text(colour = "black", size = 10),
+      axis.text.y = element_text(colour = "black", size = 10),
       legend.position = "none"
     ) +
     geom_vline(xintercept = c(-fold, fold), colour = "black", size = 0.2) +

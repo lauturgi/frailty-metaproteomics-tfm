@@ -1,8 +1,8 @@
+#renv::install("nortest")
 library(FragPipeAnalystR)
 library(ggplot2)
 library(limma)
 library(vsn)
-#renv::install("nortest")
 library(nortest)
 
 # ==================================
@@ -152,10 +152,10 @@ fraction_ft <- apply(data_matrix[,colData(se)$frailty == "FT"], 1,
 fraction_nft <- apply(data_matrix[, colData(se)$frailty == "NFT"], 1,
                       function(x) sum(!is.na(x)) / length(x))
 
-# Keep proteins with at least 50% of valid values in both conditions
+# Keep proteins with at least 50% of valid values in at least one condition
 proteins_to_keep <- (fraction_ft >= min_fraction) | (fraction_nft >= 
                                                        min_fraction)
-sum(proteins_to_keep) # 137
+sum(proteins_to_keep) # 185
 
 # Filter SummarizedExperiment
 se_filtered <- se[proteins_to_keep, ]
@@ -197,17 +197,26 @@ summary_table <- data.frame(
 summary(normality_results)
 
 #se_norm <- VSN_normalization(se_filtered)
-#data_matrix_norm <- assay (se_norm)
+#data_matrix_norm <- assay(se_norm)
 #plotDensities(data_matrix_norm, legend = FALSE)
 #meanSdPlot(data_matrix_norm)
 
-se_norm <- se_filtered
 
-# Save SummarizedExperiment normalized
-save_path <- paste0(work_path,"/data/se_norm.RData")
-save(se_norm, file = save_path)
+se_no_imp <- se_filtered
+
+# Save SummarizedExperiment no imputated
+save_path <- paste0(work_path,"/data/se_no_imp.RData")
+save(se_no_imp, file = save_path)
 
 # ==================================
-# 6. Imputation?
+# 6. Imputation
 # ==================================
-test_git <- "Hola"
+
+# Impute missing values. Missing values are replaced with random values
+# generated from a shifted and scaled normal distribution based on the existing
+# data
+se_perseus <- manual_impute(se_no_imp)
+
+# Save SummarizedExperiment imputed
+save_path <- paste0(work_path,"/data/se_perseus.RData")
+save(se_perseus, file = save_path)
