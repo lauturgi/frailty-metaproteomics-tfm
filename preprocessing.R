@@ -8,7 +8,7 @@ library(nortest)
 # ==================================
 # 1. Making SummarizedExperiment
 # ==================================
-ll
+
 # Working directory
 work_path <- getwd()
 
