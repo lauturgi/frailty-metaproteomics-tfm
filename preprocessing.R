@@ -153,7 +153,7 @@ fraction_nft <- apply(data_matrix[, colData(se)$frailty == "NFT"], 1,
                       function(x) sum(!is.na(x)) / length(x))
 
 # Keep proteins with at least 50% of valid values in both conditions
-proteins_to_keep <- (fraction_ft >= min_fraction) & (fraction_nft >= 
+proteins_to_keep <- (fraction_ft >= min_fraction) | (fraction_nft >= 
                                                        min_fraction)
 sum(proteins_to_keep) # 137
 
@@ -210,3 +210,4 @@ save(se_norm, file = save_path)
 # ==================================
 # 6. Imputation?
 # ==================================
+test_git <- "Hola"
