@@ -598,50 +598,701 @@ rownames(diff_27)
 # ==================================
 # MODEL 10
 # Build model matrix considering frailty and chf
+se_no_imp_chf <- se_no_imp[, !is.na(colData(se_no_imp)$chf)]
+dim(se_no_imp_chf)
+design = model.matrix(~ colData(se_no_imp_chf)$frailty+
+                        colData(se_no_imp_chf)$chf)
+colnames(design) = c("constant", "frailty", "chf")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_chf), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 3 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_28 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_chf)))
+diff_29 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_chf)))
+
+create_volcano_plot(diff_28, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model10_frailty.png"),
+                    title = "Model 10: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_29, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model10_chf.png"),
+                    title = "Model 10: Differentially expressed proteins - Chf")
+
+diff_28 <- diff_28[diff_28$adj.P.Val < 0.05, ]
+nrow(diff_28) 
+rownames(diff_28)
+# 7: "P06702" "A6KYJ0" "A6L792" "A9KRZ4" "P05109" "Q8A9M2" "P94360"
+
+diff_28_up <- diff_28[diff_28$logFC > 0,]
+nrow(diff_28_up) 
+rownames(diff_28_up)
+# 5
+# "P06702" "A6KYJ0" "A6L792" "P05109" "Q8A9M2"
+diff_28_down <- diff_28[diff_28$logFC < 0,]
+nrow(diff_28_down) 
+rownames(diff_28_down)
+# 2
+# "A9KRZ4" "P94360"
+
+diff_29 <- diff_29[diff_29$adj.P.Val < 0.05, ]
+nrow(diff_29) 
+rownames(diff_29)
+# 0
+
 # MODEL 11
 # Build model matrix considering frailty, chf and interaction
+design = model.matrix(~ colData(se_no_imp_chf)$frailty*
+                        colData(se_no_imp_chf)$chf)
+colnames(design) = c("constant", "frailty", "chf", "frailty:chf")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_chf), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 4 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_30 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_chf)))
+diff_31 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_chf)))
+diff_32 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_chf)))
+
+create_volcano_plot(diff_30, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model11_frailty.png"),
+                    title = "Model 11: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_31, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model11_chf.png"),
+                    title = "Model 11: Differentially expressed proteins - Chf")
+create_volcano_plot(diff_32, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model11_frailty_chf.png"),
+                    title = "Model 11: Differentially expressed proteins - Frailty:Chf")
+
+diff_30 <- diff_30[diff_30$adj.P.Val < 0.05, ]
+nrow(diff_30) 
+rownames(diff_30)
+# 5: "P06702" "A6KYJ0" "P05109" "A9KJL3" "A6L792"
+
+diff_30_up <- diff_30[diff_30$logFC > 0,]
+nrow(diff_30_up)
+rownames(diff_30_up)
+# 4
+# "P06702" "A6KYJ0" "P05109" "A6L792"
+diff_30_down <- diff_30[diff_30$logFC < 0,]
+nrow(diff_30_down) 
+rownames(diff_30_down)
+# 1
+# "A9KJL3"
+
+diff_31 <- diff_31[diff_31$adj.P.Val < 0.05, ]
+nrow(diff_31) 
+rownames(diff_31)
+# 0
+
+diff_32 <- diff_32[diff_32$adj.P.Val < 0.05, ]
+nrow(diff_32)
+rownames(diff_32)
+# 0
+
 # ==================================
 #   2.6. Frailty and depression
 # ==================================
 # MODEL 12
 # Build model matrix considering frailty and depression
+se_no_imp_depression <- se_no_imp[, !is.na(colData(se_no_imp)$depression)]
+dim(se_no_imp_depression)
+design = model.matrix(~ colData(se_no_imp_depression)$frailty+
+                        colData(se_no_imp_depression)$depression)
+colnames(design) = c("constant", "frailty", "depression")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_depression), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 3 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_33 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_depression)))
+diff_34 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_depression)))
+
+create_volcano_plot(diff_33, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model12_frailty.png"),
+                    title = "Model 12: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_34, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model12_depression.png"),
+                    title = "Model 12: Differentially expressed proteins - Depression")
+
+diff_33 <- diff_33[diff_33$adj.P.Val < 0.05, ]
+nrow(diff_33) 
+rownames(diff_33)
+# 5: "A6KYJ0" "P06702" "A9KRZ4" "A6L792" "P05109"
+
+diff_33_up <- diff_33[diff_33$logFC > 0,]
+nrow(diff_33_up) 
+rownames(diff_33_up)
+# 4
+# "A6KYJ0" "P06702" "A6L792" "P05109"
+diff_33_down <- diff_33[diff_33$logFC < 0,]
+nrow(diff_33_down) 
+rownames(diff_33_down)
+# 1
+# "A9KRZ4"
+
+diff_34 <- diff_34[diff_34$adj.P.Val < 0.05, ]
+nrow(diff_34) 
+rownames(diff_34)
+# 0
+
 # MODEL 13
 # Build model matrix considering frailty, depression and interaction
+design = model.matrix(~ colData(se_no_imp_depression)$frailty*
+                        colData(se_no_imp_depression)$depression)
+colnames(design) = c("constant", "frailty", "depression", "frailty:depression")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_depression), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 4 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_35 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_depression)))
+diff_36 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_depression)))
+diff_37 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_depression)))
+
+create_volcano_plot(diff_35, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model13_frailty.png"),
+                    title = "Model 13: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_36, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model13_depression.png"),
+                    title = "Model 13: Differentially expressed proteins - Depression")
+create_volcano_plot(diff_37, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model13_frailty_depression.png"),
+                    title = "Model 13: Differentially expressed proteins - Frailty:Depression")
+
+diff_35 <- diff_35[diff_35$adj.P.Val < 0.05, ]
+nrow(diff_35) 
+rownames(diff_35)
+# 5: "A6KYJ0" "P06702" "A9KRZ4" "A6L792" "P05109"
+
+diff_35_up <- diff_35[diff_35$logFC > 0,]
+nrow(diff_35_up)
+rownames(diff_35_up)
+# 4
+# A6KYJ0" "P06702" "A6L792" "P05109"
+diff_35_down <- diff_35[diff_35$logFC < 0,]
+nrow(diff_35_down) 
+rownames(diff_35_down)
+# 1
+# "A9KRZ4"
+
+diff_36 <- diff_36[diff_36$adj.P.Val < 0.05, ]
+nrow(diff_36) 
+rownames(diff_36)
+# 0
+
+diff_37 <- diff_37[diff_37$adj.P.Val < 0.05, ]
+nrow(diff_37)
+rownames(diff_37)
+# 0
+
 # ==================================
 #   2.7. Frailty and osteoarthritis
 # ==================================
 # MODEL 14
 # Build model matrix considering frailty and osteoarthritis
+se_no_imp_osteo <- se_no_imp[, !is.na(colData(se_no_imp)$osteoarthritis)]
+dim(se_no_imp_osteo)
+design = model.matrix(~ colData(se_no_imp_osteo)$frailty+
+                        colData(se_no_imp_osteo)$osteoarthritis)
+colnames(design) = c("constant", "frailty", "osteoarthritis")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_osteo), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 3 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_38 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_osteo)))
+diff_39 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_osteo)))
+
+create_volcano_plot(diff_38, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model14_frailty.png"),
+                    title = "Model 14: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_39, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model14_osteoarthritis.png"),
+                    title = "Model 14: Differentially expressed proteins - Osteoarthritis")
+
+diff_38 <- diff_38[diff_38$adj.P.Val < 0.05, ]
+nrow(diff_38) 
+rownames(diff_38)
+# 9: "P06702" "A6KYJ4" "A6KYJ0" "A6L792" "P05109" "A9KRZ4" "A6L048" "A6L903"
+# "Q5LHW2"
+
+diff_38_up <- diff_38[diff_38$logFC > 0,]
+nrow(diff_38_up) 
+rownames(diff_38_up)
+# 8
+# "P06702" "A6KYJ4" "A6KYJ0" "A6L792" "P05109" "A6L048" "A6L903" "Q5LHW2"
+diff_38_down <- diff_38[diff_38$logFC < 0,]
+nrow(diff_38_down) 
+rownames(diff_38_down)
+# 1
+# "A9KRZ4"
+
+diff_39 <- diff_39[diff_39$adj.P.Val < 0.05, ]
+nrow(diff_39) 
+rownames(diff_39)
+# 0
+
 # MODEL 15
 # Build model matrix considering frailty, osteoarthritis and interaction
+design = model.matrix(~ colData(se_no_imp_osteo)$frailty*
+                        colData(se_no_imp_osteo)$osteoarthritis)
+colnames(design) = c("constant", "frailty", "osteoarthritis", "frailty:osteoarthritis")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_osteo), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 4 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_40 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_osteo)))
+diff_41 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_osteo)))
+diff_42 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_osteo)))
+
+create_volcano_plot(diff_40, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model15_frailty.png"),
+                    title = "Model 15: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_41, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model15_osteoarthritis.png"),
+                    title = "Model 15: Differentially expressed proteins - Osteoarthritis")
+create_volcano_plot(diff_42, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model15_frailty_osteoarthritis.png"),
+                    title = "Model 15: Differentially expressed proteins - Frailty:Osteoarthritis")
+
+diff_40 <- diff_40[diff_40$adj.P.Val < 0.05, ]
+nrow(diff_40) 
+rownames(diff_40)
+# 13: "A6KYJ4" "A9KJJ5" "P06702" "A6L792" "P05109" "A6L903" "Q5L8C5" "Q9AE24"
+# "Q5L923" "A9KRZ4" "Q5LHW2" "A6L048" "Q8A9M2"
+
+diff_40_up <- diff_40[diff_40$logFC > 0,]
+nrow(diff_40_up)
+rownames(diff_40_up)
+# 12
+# "A6KYJ4" "A9KJJ5" "P06702" "A6L792" "P05109" "A6L903" "Q5L8C5" "Q9AE24"
+# "Q5L923" "Q5LHW2" "A6L048" "Q8A9M2"
+diff_40_down <- diff_40[diff_40$logFC < 0,]
+nrow(diff_40_down) 
+rownames(diff_40_down)
+# 1
+# "A9KRZ4"
+
+diff_41 <- diff_41[diff_41$adj.P.Val < 0.05, ]
+nrow(diff_41) 
+rownames(diff_41)
+# 0
+
+diff_42 <- diff_42[diff_42$adj.P.Val < 0.05, ]
+nrow(diff_42)
+rownames(diff_42)
+# 0
+
 # ==================================
 #   2.8. Frailty and sarcopenia
 # ==================================
 # MODEL 16
 # Build model matrix considering frailty and sarcopenia
+se_no_imp_sarco <- se_no_imp[, !is.na(colData(se_no_imp)$sarcopenia)]
+dim(se_no_imp_sarco)
+design = model.matrix(~ colData(se_no_imp_sarco)$frailty+
+                        colData(se_no_imp_sarco)$sarcopenia)
+colnames(design) = c("constant", "frailty", "sarcopenia")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_sarco), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 3 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_43 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_sarco)))
+diff_44 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_sarco)))
+
+create_volcano_plot(diff_43, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model16_frailty.png"),
+                    title = "Model 16: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_44, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model16_sarcopenia.png"),
+                    title = "Model 16: Differentially expressed proteins - Sarcopenia")
+
+diff_43 <- diff_43[diff_43$adj.P.Val < 0.05, ]
+nrow(diff_43) 
+rownames(diff_43)
+# 8: "A6KYJ0" "P06702" "A9KJL3" "O83023" "P94360" "A6L792" "C4Z2R3" "P05109"
+
+diff_43_up <- diff_43[diff_43$logFC > 0,]
+nrow(diff_43_up) 
+rownames(diff_43_up)
+# 4
+# "A6KYJ0" "P06702" "A6L792" "P05109"
+diff_43_down <- diff_43[diff_43$logFC < 0,]
+nrow(diff_43_down) 
+rownames(diff_43_down)
+# 4
+# "A9KJL3" "O83023" "P94360" "C4Z2R3"
+
+diff_44 <- diff_44[diff_44$adj.P.Val < 0.05, ]
+nrow(diff_44) 
+rownames(diff_44)
+# 0
+
 # MODEL 17
 # Build model matrix considering frailty, sarcopenia and interaction
+design = model.matrix(~ colData(se_no_imp_sarco)$frailty*
+                        colData(se_no_imp_sarco)$sarcopenia)
+colnames(design) = c("constant", "frailty", "sarcopenia", "frailty:sarcopenia")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_sarco), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 4 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_45 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_sarco)))
+diff_46 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_sarco)))
+diff_47 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_sarco)))
+
+create_volcano_plot(diff_45, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model17_frailty.png"),
+                    title = "Model 17: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_46, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model17_sarcopenia.png"),
+                    title = "Model 17: Differentially expressed proteins - Sarcopenia")
+create_volcano_plot(diff_47, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model17_frailty_sarcopenia.png"),
+                    title = "Model 17: Differentially expressed proteins - Frailty:Sarcopenia")
+
+diff_45 <- diff_45[diff_45$adj.P.Val < 0.05, ]
+nrow(diff_45) 
+rownames(diff_45)
+# 8
+# "P06702" "A6KYJ0" "P05109" "A9KJL3" "O83023" "P94360" "A6L792" "C4Z2R3"
+
+diff_45_up <- diff_45[diff_45$logFC > 0,]
+nrow(diff_45_up)
+rownames(diff_45_up)
+# 4
+# "P06702" "A6KYJ0" "P05109" "A6L792"
+diff_45_down <- diff_45[diff_45$logFC < 0,]
+nrow(diff_45_down) 
+rownames(diff_45_down)
+# 4
+# "A9KJL3" "O83023" "P94360" "C4Z2R3"
+
+diff_46 <- diff_46[diff_46$adj.P.Val < 0.05, ]
+nrow(diff_46) 
+rownames(diff_46)
+# 0
+
+diff_47 <- diff_47[diff_47$adj.P.Val < 0.05, ]
+nrow(diff_47)
+rownames(diff_47)
+# 1: "A6KYK7"
+
+diff_47_up <- diff_47[diff_47$logFC > 0,]
+nrow(diff_47_up)
+rownames(diff_47_up)
+# 0
+
+diff_47_down <- diff_47[diff_47$logFC < 0,]
+nrow(diff_47_down) 
+rownames(diff_47_down)
+# 1
+# "A6KYK7"
+
+sel0 = which("A6KYK7"==rownames(assay(se_no_imp_sarco)))
+df0 = data.frame(frailty=colData(se_no_imp_sarco)[,c("frailty")], 
+                 sarco=colData(se_no_imp_sarco)[,c("sarcopenia")], 
+                 expression=assay(se_no_imp_sarco)[sel0,])
+df0$frailty_sarco <- paste(df0$frailty, df0$sarco, sep = "_")
+ggplot(df0,aes(x=frailty_sarco,y=expression)) + geom_boxplot()
+
 # ==================================
 #   2.9. Frailty and bmi
 # ==================================
 # MODEL 18
 # Build model matrix considering frailty and bmi
+se_no_imp_bmi <- se_no_imp[, !is.na(colData(se_no_imp)$bmi)]
+dim(se_no_imp_bmi)
+design = model.matrix(~ colData(se_no_imp_bmi)$frailty+
+                        colData(se_no_imp_bmi)$bmi)
+colnames(design) = c("constant", "frailty", "bmi")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_bmi), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 3 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_48 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_bmi)))
+diff_49 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_bmi)))
+
+create_volcano_plot(diff_48, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model18_frailty.png"),
+                    title = "Model 18: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_49, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model18_bmi.png"),
+                    title = "Model 18: Differentially expressed proteins - BMI")
+
+diff_48 <- diff_48[diff_48$adj.P.Val < 0.05, ]
+nrow(diff_48) 
+rownames(diff_48)
+# 8: "P06702" "A6KYJ0" "C4KZP0" "A9KRZ4" "A6L792" "A6KYJ4" "P94360" "P05109"
+
+diff_48_up <- diff_48[diff_48$logFC > 0,]
+nrow(diff_48_up) 
+rownames(diff_48_up)
+# 6
+# "P06702" "A6KYJ0" "C4KZP0" "A6L792" "A6KYJ4" "P05109"
+diff_48_down <- diff_48[diff_48$logFC < 0,]
+nrow(diff_48_down) 
+rownames(diff_48_down)
+# 2
+# "A9KRZ4" "P94360"
+
+diff_49 <- diff_49[diff_49$adj.P.Val < 0.05, ]
+nrow(diff_49) 
+rownames(diff_49)
+# 0
+
 # MODEL 19
 # Build model matrix considering frailty, bmi and interaction
+design = model.matrix(~ colData(se_no_imp_bmi)$frailty*
+                        colData(se_no_imp_bmi)$bmi)
+colnames(design) = c("constant", "frailty", "bmi", "frailty:bmi")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_bmi), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 4 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_50 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_bmi)))
+diff_51 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_bmi)))
+diff_52 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_bmi)))
+
+create_volcano_plot(diff_50, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model19_frailty.png"),
+                    title = "Model 19: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_51, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model19_bmi.png"),
+                    title = "Model 19: Differentially expressed proteins - BMI")
+create_volcano_plot(diff_52, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model19_frailty_bmi.png"),
+                    title = "Model 19: Differentially expressed proteins - Frailty:BMI")
+
+diff_50 <- diff_50[diff_50$adj.P.Val < 0.05, ]
+nrow(diff_50) 
+rownames(diff_50)
+# 0
+
+diff_51 <- diff_51[diff_51$adj.P.Val < 0.05, ]
+nrow(diff_51) 
+rownames(diff_51)
+# 0
+
+diff_52 <- diff_52[diff_52$adj.P.Val < 0.05, ]
+nrow(diff_52)
+rownames(diff_52)
+# 0
+
 # ==================================
 #   2.10. Frailty and energy
 # ==================================
 # MODEL 20
 # Build model matrix considering frailty and energy
+se_no_imp_energy <- se_no_imp[, !is.na(colData(se_no_imp)$energy)]
+dim(se_no_imp_energy)
+design = model.matrix(~ colData(se_no_imp_energy)$frailty+
+                        colData(se_no_imp_energy)$energy)
+colnames(design) = c("constant", "frailty", "energy")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_energy), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 3 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_53 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_energy)))
+diff_54 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_energy)))
+
+create_volcano_plot(diff_53, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model20_frailty.png"),
+                    title = "Model 20: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_54, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model20_energy.png"),
+                    title = "Model 20: Differentially expressed proteins - Energy")
+
+diff_53 <- diff_53[diff_53$adj.P.Val < 0.05, ]
+nrow(diff_53) 
+rownames(diff_53)
+# 0
+
+diff_54 <- diff_54[diff_54$adj.P.Val < 0.05, ]
+nrow(diff_54) 
+rownames(diff_54)
+# 0
+
 # MODEL 21
 # Build model matrix considering frailty, energy and interaction
+design = model.matrix(~ colData(se_no_imp_energy)$frailty*
+                        colData(se_no_imp_energy)$energy)
+colnames(design) = c("constant", "frailty", "energy", "frailty:energy")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_energy), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 4 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_55 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_energy)))
+diff_56 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_energy)))
+diff_57 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_energy)))
+
+create_volcano_plot(diff_55, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model21_frailty.png"),
+                    title = "Model 21: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_56, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model21_energy.png"),
+                    title = "Model 21: Differentially expressed proteins - Energy")
+create_volcano_plot(diff_57, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model21_frailty_energy.png"),
+                    title = "Model 21: Differentially expressed proteins - Frailty:energy")
+
+diff_55 <- diff_55[diff_55$adj.P.Val < 0.05, ]
+nrow(diff_55) 
+rownames(diff_55)
+# 0
+
+diff_56 <- diff_56[diff_56$adj.P.Val < 0.05, ]
+nrow(diff_56) 
+rownames(diff_56)
+# 0
+
+diff_57 <- diff_57[diff_57$adj.P.Val < 0.05, ]
+nrow(diff_57)
+rownames(diff_57)
+# 0
+
 # ==================================
 #   2.11. Frailty and ilef
 # ==================================
 # MODEL 22
 # Build model matrix considering frailty and ilef
+se_no_imp_ilef <- se_no_imp[, !is.na(colData(se_no_imp)$ilef)]
+dim(se_no_imp_ilef)
+design = model.matrix(~ colData(se_no_imp_ilef)$frailty+
+                        colData(se_no_imp_ilef)$ilef)
+colnames(design) = c("constant", "frailty", "ilef")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_ilef), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 3 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_58 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_ilef)))
+diff_59 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_ilef)))
+
+create_volcano_plot(diff_58, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model22_frailty.png"),
+                    title = "Model 22: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_59, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model22_ilef.png"),
+                    title = "Model 22: Differentially expressed proteins - ILEF")
+
+diff_58 <- diff_58[diff_58$adj.P.Val < 0.05, ]
+nrow(diff_58) 
+rownames(diff_58)
+# 1: "A6L792"
+
+diff_58_up <- diff_58[diff_58$logFC > 0,]
+nrow(diff_58_up) 
+rownames(diff_58_up)
+# 1
+# "A6L792"
+diff_58_down <- diff_58[diff_58$logFC < 0,]
+nrow(diff_58_down) 
+rownames(diff_58_down)
+# 0
+
+diff_59 <- diff_59[diff_59$adj.P.Val < 0.05, ]
+nrow(diff_59) 
+rownames(diff_59)
+# 0
+
 # MODEL 23
 # Build model matrix considering frailty, ilef and interaction
+design = model.matrix(~ colData(se_no_imp_ilef)$frailty*
+                        colData(se_no_imp_ilef)$ilef)
+colnames(design) = c("constant", "frailty", "ilef", "frailty:ilef")
+head(design)
+
+# Fit a linear model for each row of the expression matrix
+fit = lmFit(assay(se_no_imp_ilef), design)
+fit1 = eBayes(fit)
+head(coef(fit1))
+
+# 4 coefficients per each column of model matrix. Adjusted using Benjamini-Hochberg
+diff_60 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_ilef)))
+diff_61 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_ilef)))
+diff_62 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+                    number=nrow(assay(se_no_imp_ilef)))
+
+create_volcano_plot(diff_60, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model23_frailty.png"),
+                    title = "Model 23: Differentially expressed proteins - Frailty")
+create_volcano_plot(diff_61, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model23_ilef.png"),
+                    title = "Model 23: Differentially expressed proteins - ILEF")
+create_volcano_plot(diff_62, save_path = paste0(work_path, "/plots/limma_analysis/no_imputation/volcano_plot_model23_frailty_ilef.png"),
+                    title = "Model 23: Differentially expressed proteins - Frailty:ILEF")
+
+diff_60 <- diff_60[diff_60$adj.P.Val < 0.05, ]
+nrow(diff_60) 
+rownames(diff_60)
+# 2: "A6KYJ0" "A6L792"
+
+diff_60_up <- diff_60[diff_60$logFC > 0,]
+nrow(diff_60_up) 
+rownames(diff_60_up)
+# 2
+# "A6KYJ0" "A6L792"
+diff_60_down <- diff_60[diff_60$logFC < 0,]
+nrow(diff_60_down) 
+rownames(diff_60_down)
+# 0
+
+diff_61 <- diff_61[diff_61$adj.P.Val < 0.05, ]
+nrow(diff_61) 
+rownames(diff_61)
+# 0
+
+diff_62 <- diff_62[diff_62$adj.P.Val < 0.05, ]
+nrow(diff_62)
+rownames(diff_62)
+# 0
 
 # ==================================
 # 3. All predictor variables significantly related to frailty
@@ -683,206 +1334,251 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 29 coefficients per each column of the model matrix. Adjusted using the Benjamini-Hochberg
-diff_23 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_24 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_25 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_26 <- topTable(fit1,coef=5, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_27 <- topTable(fit1,coef=6, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_28 <- topTable(fit1,coef=7, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_29 <- topTable(fit1,coef=8, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_30 <- topTable(fit1,coef=9, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_31 <- topTable(fit1,coef=10, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_32 <- topTable(fit1,coef=11, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_33 <- topTable(fit1,coef=12, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_34 <- topTable(fit1,coef=13, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_35 <- topTable(fit1,coef=14, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_36 <- topTable(fit1,coef=15, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_37 <- topTable(fit1,coef=16, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_38 <- topTable(fit1,coef=17, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_39 <- topTable(fit1,coef=18, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_40 <- topTable(fit1,coef=19, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_41 <- topTable(fit1,coef=20, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_42 <- topTable(fit1,coef=21, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_43 <- topTable(fit1,coef=22, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_44 <- topTable(fit1,coef=23, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_45 <- topTable(fit1,coef=24, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_46 <- topTable(fit1,coef=25, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_47 <- topTable(fit1,coef=26, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_48 <- topTable(fit1,coef=27, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
-diff_49 <- topTable(fit1,coef=28, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_63 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_64 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_65 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_66 <- topTable(fit1,coef=5, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_67 <- topTable(fit1,coef=6, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_68 <- topTable(fit1,coef=7, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_69 <- topTable(fit1,coef=8, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_70 <- topTable(fit1,coef=9, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_71 <- topTable(fit1,coef=10, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_72 <- topTable(fit1,coef=11, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_73 <- topTable(fit1,coef=12, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_74 <- topTable(fit1,coef=13, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_75 <- topTable(fit1,coef=14, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_76 <- topTable(fit1,coef=15, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_77 <- topTable(fit1,coef=16, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_78 <- topTable(fit1,coef=17, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_79 <- topTable(fit1,coef=18, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_80 <- topTable(fit1,coef=19, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_81 <- topTable(fit1,coef=20, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_82 <- topTable(fit1,coef=21, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_83 <- topTable(fit1,coef=22, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_84 <- topTable(fit1,coef=23, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_85 <- topTable(fit1,coef=24, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_86 <- topTable(fit1,coef=25, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_87 <- topTable(fit1,coef=26, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_88 <- topTable(fit1,coef=27, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
+diff_89 <- topTable(fit1,coef=28, adjust ="BH", sort.by="P", number=nrow(assay(se_no_imp_all)))
 
 # frailty
-diff_23 <- diff_23[diff_23$adj.P.Val < 0.05, ]
-nrow(diff_23) 
-rownames(diff_23)
+diff_63 <- diff_63[diff_63$adj.P.Val < 0.05, ]
+nrow(diff_63) 
+rownames(diff_63)
 # 0
 
 # sex
-diff_24 <- diff_24[diff_24$adj.P.Val < 0.05, ]
-nrow(diff_24) 
-rownames(diff_24)
+diff_64 <- diff_64[diff_64$adj.P.Val < 0.05, ]
+nrow(diff_64)
+rownames(diff_64)
 # 0
 
 # alcohol monthly
-diff_25 <- diff_25[diff_25$adj.P.Val < 0.05, ]
-nrow(diff_25) 
-rownames(diff_25)
+diff_65 <- diff_65[diff_65$adj.P.Val < 0.05, ]
+nrow(diff_65) 
+rownames(diff_65)
 # 0
 
 # alcohol weekly
-diff_26 <- diff_26[diff_26$adj.P.Val < 0.05, ]
-nrow(diff_26) 
-rownames(diff_26)
+diff_66 <- diff_66[diff_66$adj.P.Val < 0.05, ]
+nrow(diff_66) 
+rownames(diff_66)
+# 1: "P55259"
+
+diff_66_up <- diff_66[diff_66$logFC > 0,]
+nrow(diff_66_up) 
+rownames(diff_66_up)
+# 1
+# "P55259"
+diff_66_down <- diff_66[diff_66$logFC < 0,]
+nrow(diff_66_down) 
+rownames(diff_66_down)
 # 0
 
 # former smoker
-diff_27 <- diff_27[diff_27$adj.P.Val < 0.05, ]
-nrow(diff_27) 
-rownames(diff_27)
+diff_67 <- diff_67[diff_67$adj.P.Val < 0.05, ]
+nrow(diff_67) 
+rownames(diff_67)
 # 0
 
 # current smoker
-diff_28 <- diff_28[diff_28$adj.P.Val < 0.05, ]
-nrow(diff_28) 
-rownames(diff_28)
+diff_68 <- diff_68[diff_68$adj.P.Val < 0.05, ]
+nrow(diff_68)
+rownames(diff_68)
 # 0
 
 # diabetes
-diff_29 <- diff_29[diff_29$adj.P.Val < 0.05, ]
-nrow(diff_29) 
-rownames(diff_29)
+diff_69 <- diff_69[diff_69$adj.P.Val < 0.05, ]
+nrow(diff_69) 
+rownames(diff_69)
 # 0
 
 # chf
-diff_30 <- diff_30[diff_30$adj.P.Val < 0.05, ]
-nrow(diff_30) 
-rownames(diff_30)
+diff_70 <- diff_70[diff_70$adj.P.Val < 0.05, ]
+nrow(diff_70) 
+rownames(diff_70)
 # 0
 
 # depression
-diff_31 <- diff_31[diff_31$adj.P.Val < 0.05, ]
-nrow(diff_31) 
-rownames(diff_31)
+diff_71 <- diff_71[diff_71$adj.P.Val < 0.05, ]
+nrow(diff_71) 
+rownames(diff_71)
+# 1: "A9KNK6"
+
+diff_71_up <- diff_71[diff_71$logFC > 0,]
+nrow(diff_71_up) 
+rownames(diff_71_up)
+# 1
+# "A9KNK6"
+diff_71_down <- diff_71[diff_71$logFC < 0,]
+nrow(diff_71_down) 
+rownames(diff_71_down)
 # 0
 
 # osteoarthritis
-diff_32 <- diff_32[diff_32$adj.P.Val < 0.05, ]
-nrow(diff_32) 
-rownames(diff_32)
+diff_72 <- diff_72[diff_72$adj.P.Val < 0.05, ]
+nrow(diff_72)
+rownames(diff_72)
 # 0
 
 # sarcopenia
-diff_33 <- diff_33[diff_33$adj.P.Val < 0.05, ]
-nrow(diff_33) 
-rownames(diff_33)
+diff_73 <- diff_73[diff_73$adj.P.Val < 0.05, ]
+nrow(diff_73)
+rownames(diff_73)
 # 0
 
 # ilef
-diff_34 <- diff_34[diff_34$adj.P.Val < 0.05, ]
-nrow(diff_34) 
-rownames(diff_34)
+diff_74 <- diff_74[diff_74$adj.P.Val < 0.05, ]
+nrow(diff_74)
+rownames(diff_74)
 # 0
 
 # bmi
-diff_35 <- diff_35[diff_35$adj.P.Val < 0.05, ]
-nrow(diff_35) 
-rownames(diff_35)
+diff_75 <- diff_75[diff_75$adj.P.Val < 0.05, ]
+nrow(diff_75)
+rownames(diff_75)
 # 0
 
 # energy
-diff_36 <- diff_36[diff_36$adj.P.Val < 0.05, ]
-nrow(diff_36) 
-rownames(diff_36)
-# 1: "A9KRZ1"
-
-# frailty:sex
-diff_37 <- diff_37[diff_37$adj.P.Val < 0.05, ]
-nrow(diff_37) 
-rownames(diff_37)
+diff_76 <- diff_76[diff_76$adj.P.Val < 0.05, ]
+nrow(diff_76)
+rownames(diff_76)
 # 0
 
-sel0 = which("Q189R2"==rownames(assay(se_no_imp_all)))
-df0 = data.frame(frailty=colData(se_no_imp_all)[,c("frailty")], 
-                 sex=colData(se_no_imp_all)[,c("sex")], 
-                 expression=assay(se_no_imp_all)[sel0,])
-df0$frailty_sex <- paste(df0$frailty, df0$sex, sep = "_")
-ggplot(df0,aes(x=frailty_sex,y=expression)) + geom_boxplot()
+# frailty:sex
+diff_77 <- diff_77[diff_77$adj.P.Val < 0.05, ]
+nrow(diff_77) 
+rownames(diff_77)
+# 3: "P95544" "A6KYJ0" "Q189R2"
+
+diff_77_up <- diff_77[diff_77$logFC > 0,]
+nrow(diff_77_up) 
+rownames(diff_77_up)
+# 0
+diff_77_down <- diff_77[diff_77$logFC < 0,]
+nrow(diff_77_down) 
+rownames(diff_77_down)
+# 3
+# "P95544" "A6KYJ0" "Q189R2"
 
 # frailty:alcohol_monthly
-diff_38 <- diff_38[diff_38$adj.P.Val < 0.05, ]
-nrow(diff_38) 
-rownames(diff_38)
+diff_78 <- diff_78[diff_78$adj.P.Val < 0.05, ]
+nrow(diff_78)
+rownames(diff_78)
 # 0
 
 # frailty:alcohol_weekly
-diff_39 <- diff_39[diff_39$adj.P.Val < 0.05, ]
-nrow(diff_39) 
-rownames(diff_39)
+diff_79 <- diff_79[diff_79$adj.P.Val < 0.05, ]
+nrow(diff_79)
+rownames(diff_79)
 # 0
 
 # frailty:former
-diff_40 <- diff_40[diff_40$adj.P.Val < 0.05, ]
-nrow(diff_40) 
-rownames(diff_40)
+diff_80 <- diff_80[diff_80$adj.P.Val < 0.05, ]
+nrow(diff_80) 
+rownames(diff_80)
+# 1: "P95544"
+
+diff_80_up <- diff_80[diff_80$logFC > 0,]
+nrow(diff_80_up) 
+rownames(diff_80_up)
 # 0
+diff_80_down <- diff_80[diff_80$logFC < 0,]
+nrow(diff_80_down) 
+rownames(diff_80_down)
+# 1
+# "P95544"
 
 # frailty:current
-diff_41 <- diff_41[diff_41$adj.P.Val < 0.05, ]
-nrow(diff_41) 
-rownames(diff_41)
+diff_81 <- diff_81[diff_81$adj.P.Val < 0.05, ]
+nrow(diff_81)
+rownames(diff_81)
+# 1: "A6KXA0"
+
+diff_81_up <- diff_81[diff_81$logFC > 0,]
+nrow(diff_81_up) 
+rownames(diff_81_up)
+# 1
+# "A6KXA0"
+diff_81_down <- diff_81[diff_81$logFC < 0,]
+nrow(diff_81_down) 
+rownames(diff_81_down)
 # 0
 
-sel0 = which("A6KXA0"==rownames(assay(se_no_imp_all)))
-df0 = data.frame(frailty=colData(se_no_imp_all)[,c("frailty")], 
-                 tobacco=colData(se_no_imp_all)[,c("tobacco")], 
-                 expression=assay(se_no_imp_all)[sel0,])
-df0$frailty_tobacco <- paste(df0$frailty, df0$tobacco, sep = "_")
-ggplot(df0,aes(x=frailty_tobacco,y=expression)) + geom_boxplot()
-
-
 # frailty:diabetes
-diff_42 <- diff_42[diff_42$adj.P.Val < 0.05, ]
-nrow(diff_42) 
-rownames(diff_42)
+diff_82 <- diff_82[diff_82$adj.P.Val < 0.05, ]
+nrow(diff_82)
+rownames(diff_82)
 # 0
 
 # frailty:chf
-diff_43 <- diff_43[diff_43$adj.P.Val < 0.05, ]
-nrow(diff_43) 
-rownames(diff_43)
+diff_83 <- diff_83[diff_83$adj.P.Val < 0.05, ]
+nrow(diff_83) 
+rownames(diff_83)
 # 0
 
 # frailty:depression
-diff_44 <- diff_44[diff_44$adj.P.Val < 0.05, ]
-nrow(diff_44) 
-rownames(diff_44)
+diff_84 <- diff_84[diff_84$adj.P.Val < 0.05, ]
+nrow(diff_84) 
+rownames(diff_84)
 # 0
 
 # frailty:osteoarthritis
-diff_45 <- diff_45[diff_45$adj.P.Val < 0.05, ]
-nrow(diff_45) 
-rownames(diff_45)
+diff_85 <- diff_85[diff_85$adj.P.Val < 0.05, ]
+nrow(diff_85) 
+rownames(diff_85)
 # 0
 
 # frailty:sarcopenia
-diff_46 <- diff_46[diff_46$adj.P.Val < 0.05, ]
-nrow(diff_46) 
-rownames(diff_46)
+diff_86 <- diff_86[diff_86$adj.P.Val < 0.05, ]
+nrow(diff_86)
+rownames(diff_86)
 # 0
 
 # frailty:ilef
-diff_47 <- diff_47[diff_47$adj.P.Val < 0.05, ]
-nrow(diff_47) 
-rownames(diff_47)
+diff_87 <- diff_87[diff_87$adj.P.Val < 0.05, ]
+nrow(diff_87) 
+rownames(diff_87)
 # 0
 
 # frailty:bmi
-diff_48 <- diff_48[diff_48$adj.P.Val < 0.05, ]
-nrow(diff_48) 
-rownames(diff_48)
+diff_88 <- diff_88[diff_88$adj.P.Val < 0.05, ]
+nrow(diff_88) 
+rownames(diff_88)
+# 2: "Q59309" "P0C2E7"
+
+diff_88_up <- diff_88[diff_88$logFC > 0,]
+nrow(diff_88_up) 
+rownames(diff_88_up)
+# 2
+# "Q59309" "P0C2E7"
+diff_88_down <- diff_88[diff_88$logFC < 0,]
+nrow(diff_88_down) 
+rownames(diff_88_down)
 # 0
 
-sel0 = which("Q59309"==rownames(assay(se_no_imp_all)))
+sel0 = which("P0C2E7"==rownames(assay(se_no_imp_all)))
 df0 = data.frame(frailty=colData(se_no_imp_all)[,c("frailty")], 
                  bmi=colData(se_no_imp_all)[,c("bmi")], 
                  expression=assay(se_no_imp_all)[sel0,])
@@ -890,10 +1586,9 @@ ggplot(df0, aes(x = bmi, y = expression, color = frailty)) +
   geom_point(size = 3, alpha = 0.7) +
   geom_smooth(method = "lm", aes(linetype = frailty))
 
-
 # frailty:energy
-diff_49 <- diff_49[diff_49$adj.P.Val < 0.05, ]
-nrow(diff_49) 
-rownames(diff_49)
+diff_89 <- diff_89[diff_89$adj.P.Val < 0.05, ]
+nrow(diff_89)
+rownames(diff_89)
 # 0
 
