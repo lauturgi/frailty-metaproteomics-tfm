@@ -1,6 +1,11 @@
+# Install dependencies of Uniprot
+#sudo apt update
+#sudo apt install libmagick++-dev
+#renv::install("UniprotR")
 library(ggplot2)
 library(limma)
 library(dplyr)
+library(UniprotR)
 
 # ==================================
 # Limma analysis
@@ -50,10 +55,38 @@ diff_1_up <- diff_1[diff_1$logFC > 0,]
 nrow(diff_1_up) 
 rownames(diff_1_up)
 # 7: "P06702" "A6KYJ0" "A6L792" "P05109" "Q8A9M2" "A6KYJ4" "C4KZP0"
+
+# Get annotation from Uniprot
+prot_ann <- GetProteinAnnontate(rownames(diff_1_up), columns = c("gene_primary",
+                                                        "organism_name",
+                                                        "protein_name",
+                                                        "cc_function",
+                                                        "keyword","go_p",
+                                                        "go_c",
+                                                        "go_f"))
+prot_ann$model <- "ft"
+prot_ann$coef <- "ft"
+prot_ann$expres <- "up"
+
 diff_1_down <- diff_1[diff_1$logFC < 0,]
 nrow(diff_1_down) 
 rownames(diff_1_down)
 # 3: "A9KRZ4" "P94360" "A9KJL3"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_1_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 
 sel0 = which("P06702"==rownames(assay(se_no_imp)))
 df0 = data.frame(frailty=colData(se_no_imp)[,c("frailty")],
@@ -97,6 +130,21 @@ diff_2_up <- diff_2[diff_2$logFC > 0,]
 nrow(diff_2_up) 
 rownames(diff_2_up)
 # 6
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_2_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+sex"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_2_down <- diff_2[diff_2$logFC < 0,]
 nrow(diff_2_down) 
 rownames(diff_2_down)
@@ -148,11 +196,39 @@ rownames(diff_4_up)
 # "P95544" "Q5L9B6" "C4ZBD3" "Q5L8C5" "C4ZD46" "Q8A9M2" "A8YXK9" "B9E9L7"
 # "Q8A1A2" "A6KYH8" "A9KKU0" "P55990" "C4ZI85" "C4ZBG1" "Q59199" "P06702"
 # "A6KYH1" "A6KYJ6" "C4ZF71" "Q18CF4" "C4Z0Q6"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_4_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*sex"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_4_down <- diff_4[diff_4$logFC < 0,]
 nrow(diff_4_down) 
 rownames(diff_4_down)
 # 1
 # "A9KRZ4"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_4_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*sex"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_5 <- diff_5[diff_5$adj.P.Val < 0.05, ]
 nrow(diff_5) 
@@ -173,6 +249,20 @@ nrow(diff_6_down)
 rownames(diff_6_down)
 # 1
 # "C4Z0Q6"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_6_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*sex"
+prot_ann_add$coef <- "ft:sex"
+prot_ann_add$expres <- "down"
+
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 sel0 = which("C4Z0Q6"==rownames(assay(se_no_imp)))
 df0 = data.frame(frailty=colData(se_no_imp)[,c("frailty")], 
@@ -240,6 +330,20 @@ nrow(diff_9_up)
 rownames(diff_9_up)
 # 1
 # "P55259"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_9_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+alcohol"
+prot_ann_add$coef <- "alcohol weekly"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_9_down <- diff_9[diff_9$logFC < 0,]
 nrow(diff_9_down) 
 rownames(diff_9_down)
@@ -301,6 +405,20 @@ nrow(diff_12_up)
 rownames(diff_12_up)
 # 1
 # "P55259"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_12_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*alcohol"
+prot_ann_add$coef <- "alcohol weekly"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_12_down <- diff_12[diff_12$logFC < 0,]
 nrow(diff_12_down) 
 rownames(diff_12_down)
@@ -321,6 +439,20 @@ nrow(diff_14_up)
 rownames(diff_14_up)
 # 1
 # "A6TH53"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_14_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*alcohol"
+prot_ann_add$coef <- "ft:alcohol weekly"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_14_down <- diff_14[diff_14$logFC < 0,]
 nrow(diff_14_down) 
 rownames(diff_14_down)
@@ -376,10 +508,37 @@ diff_15_up <- diff_15[diff_15$logFC > 0,]
 nrow(diff_15_up)
 rownames(diff_15_up)
 # 4: "P06702" "A6KYJ0" "A6L792" "P05109"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_15_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+tobacco"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_15_down <- diff_15[diff_15$logFC < 0,]
 nrow(diff_15_down)
 rownames(diff_15_down)
 # 2: "A9KRZ4" "P94360"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_15_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+tobacco"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_16 <- diff_16[diff_16$adj.P.Val < 0.05, ]
 nrow(diff_16) 
@@ -396,6 +555,20 @@ nrow(diff_17_up)
 rownames(diff_17_up)
 # 1
 # "C4ZB90"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_17_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+tobacco"
+prot_ann_add$coef <- "tobacco current"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_17_down <- diff_17[diff_17$logFC < 0,]
 nrow(diff_17_down) 
 rownames(diff_17_down)
@@ -480,6 +653,20 @@ diff_22_up <- diff_22[diff_22$logFC > 0,]
 nrow(diff_22_up)
 rownames(diff_22_up)
 # 79
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_22_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*tobacco"
+prot_ann_add$coef <- "ft:tobacco current"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_22_down <- diff_22[diff_22$logFC < 0,]
 nrow(diff_22_up)
 rownames(diff_22_down)
@@ -530,11 +717,38 @@ nrow(diff_23_up)
 rownames(diff_23_up)
 # 4
 # "A6KYJ0" "P06702" "A6L792" "C4KZP0"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_23_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+diabetes"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_23_down <- diff_23[diff_23$logFC < 0,]
 nrow(diff_23_down) 
 rownames(diff_23_down)
 # 1
 # "A9KRZ4"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_23_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+diabetes"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_24 <- diff_24[diff_24$adj.P.Val < 0.05, ]
 nrow(diff_24) 
@@ -578,6 +792,20 @@ nrow(diff_25_up)
 rownames(diff_25_up)
 # 1
 # "A6KYJ0"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_25_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*diabetes"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_25_down <- diff_25[diff_25$logFC < 0,]
 nrow(diff_25_down) 
 rownames(diff_25_down)
@@ -631,11 +859,38 @@ nrow(diff_28_up)
 rownames(diff_28_up)
 # 5
 # "P06702" "A6KYJ0" "A6L792" "P05109" "Q8A9M2"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_28_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+chf"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_28_down <- diff_28[diff_28$logFC < 0,]
 nrow(diff_28_down) 
 rownames(diff_28_down)
 # 2
 # "A9KRZ4" "P94360"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_28_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+chf"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_29 <- diff_29[diff_29$adj.P.Val < 0.05, ]
 nrow(diff_29) 
@@ -679,11 +934,38 @@ nrow(diff_30_up)
 rownames(diff_30_up)
 # 4
 # "P06702" "A6KYJ0" "P05109" "A6L792"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_30_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*chf"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_30_down <- diff_30[diff_30$logFC < 0,]
 nrow(diff_30_down) 
 rownames(diff_30_down)
 # 1
 # "A9KJL3"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_30_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*chf"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_31 <- diff_31[diff_31$adj.P.Val < 0.05, ]
 nrow(diff_31) 
@@ -733,11 +1015,38 @@ nrow(diff_33_up)
 rownames(diff_33_up)
 # 4
 # "A6KYJ0" "P06702" "A6L792" "P05109"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_33_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+depression"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_33_down <- diff_33[diff_33$logFC < 0,]
 nrow(diff_33_down) 
 rownames(diff_33_down)
 # 1
 # "A9KRZ4"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_33_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+depression"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_34 <- diff_34[diff_34$adj.P.Val < 0.05, ]
 nrow(diff_34) 
@@ -781,11 +1090,38 @@ nrow(diff_35_up)
 rownames(diff_35_up)
 # 4
 # A6KYJ0" "P06702" "A6L792" "P05109"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_35_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*depression"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_35_down <- diff_35[diff_35$logFC < 0,]
 nrow(diff_35_down) 
 rownames(diff_35_down)
 # 1
 # "A9KRZ4"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_35_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*depression"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_36 <- diff_36[diff_36$adj.P.Val < 0.05, ]
 nrow(diff_36) 
@@ -836,11 +1172,38 @@ nrow(diff_38_up)
 rownames(diff_38_up)
 # 8
 # "P06702" "A6KYJ4" "A6KYJ0" "A6L792" "P05109" "A6L048" "A6L903" "Q5LHW2"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_38_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+osteoarthritis"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_38_down <- diff_38[diff_38$logFC < 0,]
 nrow(diff_38_down) 
 rownames(diff_38_down)
 # 1
 # "A9KRZ4"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_38_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+osteoarthritis"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_39 <- diff_39[diff_39$adj.P.Val < 0.05, ]
 nrow(diff_39) 
@@ -886,11 +1249,38 @@ rownames(diff_40_up)
 # 12
 # "A6KYJ4" "A9KJJ5" "P06702" "A6L792" "P05109" "A6L903" "Q5L8C5" "Q9AE24"
 # "Q5L923" "Q5LHW2" "A6L048" "Q8A9M2"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_40_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*osteoarthritis"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_40_down <- diff_40[diff_40$logFC < 0,]
 nrow(diff_40_down) 
 rownames(diff_40_down)
 # 1
 # "A9KRZ4"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_40_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*osteoarthritis"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_41 <- diff_41[diff_41$adj.P.Val < 0.05, ]
 nrow(diff_41) 
@@ -940,11 +1330,38 @@ nrow(diff_43_up)
 rownames(diff_43_up)
 # 4
 # "A6KYJ0" "P06702" "A6L792" "P05109"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_43_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+sarcopenia"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_43_down <- diff_43[diff_43$logFC < 0,]
 nrow(diff_43_down) 
 rownames(diff_43_down)
 # 4
 # "A9KJL3" "O83023" "P94360" "C4Z2R3"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_43_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+sarcopenia"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_44 <- diff_44[diff_44$adj.P.Val < 0.05, ]
 nrow(diff_44) 
@@ -989,11 +1406,38 @@ nrow(diff_45_up)
 rownames(diff_45_up)
 # 4
 # "P06702" "A6KYJ0" "P05109" "A6L792"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_45_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*sarcopenia"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_45_down <- diff_45[diff_45$logFC < 0,]
 nrow(diff_45_down) 
 rownames(diff_45_down)
 # 4
 # "A9KJL3" "O83023" "P94360" "C4Z2R3"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_45_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*sarcopenia"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_46 <- diff_46[diff_46$adj.P.Val < 0.05, ]
 nrow(diff_46) 
@@ -1015,6 +1459,19 @@ nrow(diff_47_down)
 rownames(diff_47_down)
 # 1
 # "A6KYK7"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_47_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*sarcopenia"
+prot_ann_add$coef <- "ft:sarcopenia"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 sel0 = which("A6KYK7"==rownames(assay(se_no_imp_sarco)))
 df0 = data.frame(frailty=colData(se_no_imp_sarco)[,c("frailty")], 
@@ -1061,11 +1518,38 @@ nrow(diff_48_up)
 rownames(diff_48_up)
 # 6
 # "P06702" "A6KYJ0" "C4KZP0" "A6L792" "A6KYJ4" "P05109"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_48_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+bmi"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_48_down <- diff_48[diff_48$logFC < 0,]
 nrow(diff_48_down) 
 rownames(diff_48_down)
 # 2
 # "A9KRZ4" "P94360"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_48_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+bmi"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
 
 diff_49 <- diff_49[diff_49$adj.P.Val < 0.05, ]
 nrow(diff_49) 
@@ -1232,6 +1716,20 @@ nrow(diff_58_up)
 rownames(diff_58_up)
 # 1
 # "A6L792"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_58_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft+ilef"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_58_down <- diff_58[diff_58$logFC < 0,]
 nrow(diff_58_down) 
 rownames(diff_58_down)
@@ -1279,6 +1777,20 @@ nrow(diff_60_up)
 rownames(diff_60_up)
 # 2
 # "A6KYJ0" "A6L792"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_60_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*ilef"
+prot_ann_add$coef <- "ft"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_60_down <- diff_60[diff_60$logFC < 0,]
 nrow(diff_60_down) 
 rownames(diff_60_down)
@@ -1391,6 +1903,20 @@ nrow(diff_66_up)
 rownames(diff_66_up)
 # 1
 # "P55259"
+
+# Get annotation from Uniprot
+prot_ann_add <- GetProteinAnnontate(rownames(diff_66_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*(sex+alcohol+tobacco+diabetes+chf+depression+osteoarthritis+sarcopenia+ilef+bmi+energy)"
+prot_ann_add$coef <- "alcohol weekly"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_66_down <- diff_66[diff_66$logFC < 0,]
 nrow(diff_66_down) 
 rownames(diff_66_down)
@@ -1431,6 +1957,19 @@ nrow(diff_71_up)
 rownames(diff_71_up)
 # 1
 # "A9KNK6"
+
+prot_ann_add <- GetProteinAnnontate(rownames(diff_71_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*(sex+alcohol+tobacco+diabetes+chf+depression+osteoarthritis+sarcopenia+ilef+bmi+energy)"
+prot_ann_add$coef <- "depression"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_71_down <- diff_71[diff_71$logFC < 0,]
 nrow(diff_71_down) 
 rownames(diff_71_down)
@@ -1482,6 +2021,18 @@ rownames(diff_77_down)
 # 3
 # "P95544" "A6KYJ0" "Q189R2"
 
+prot_ann_add <- GetProteinAnnontate(rownames(diff_77_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*(sex+alcohol+tobacco+diabetes+chf+depression+osteoarthritis+sarcopenia+ilef+bmi+energy)"
+prot_ann_add$coef <- "ft:sex"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 # frailty:alcohol_monthly
 diff_78 <- diff_78[diff_78$adj.P.Val < 0.05, ]
 nrow(diff_78)
@@ -1510,6 +2061,18 @@ rownames(diff_80_down)
 # 1
 # "P95544"
 
+prot_ann_add <- GetProteinAnnontate(rownames(diff_80_down),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*(sex+alcohol+tobacco+diabetes+chf+depression+osteoarthritis+sarcopenia+ilef+bmi+energy)"
+prot_ann_add$coef <- "ft:former"
+prot_ann_add$expres <- "down"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 # frailty:current
 diff_81 <- diff_81[diff_81$adj.P.Val < 0.05, ]
 nrow(diff_81)
@@ -1521,6 +2084,19 @@ nrow(diff_81_up)
 rownames(diff_81_up)
 # 1
 # "A6KXA0"
+
+prot_ann_add <- GetProteinAnnontate(rownames(diff_81_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*(sex+alcohol+tobacco+diabetes+chf+depression+osteoarthritis+sarcopenia+ilef+bmi+energy)"
+prot_ann_add$coef <- "ft:current"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_81_down <- diff_81[diff_81$logFC < 0,]
 nrow(diff_81_down) 
 rownames(diff_81_down)
@@ -1573,6 +2149,19 @@ nrow(diff_88_up)
 rownames(diff_88_up)
 # 2
 # "Q59309" "P0C2E7"
+
+prot_ann_add <- GetProteinAnnontate(rownames(diff_88_up),
+                                    columns = c("gene_primary",
+                                                "organism_name",
+                                                "protein_name",
+                                                "cc_function",
+                                                "keyword","go_p", "go_c", 
+                                                "go_f"))
+prot_ann_add$model <- "ft*(sex+alcohol+tobacco+diabetes+chf+depression+osteoarthritis+sarcopenia+ilef+bmi+energy)"
+prot_ann_add$coef <- "ft:bmi"
+prot_ann_add$expres <- "up"
+prot_ann <- rbind(prot_ann, prot_ann_add)
+
 diff_88_down <- diff_88[diff_88$logFC < 0,]
 nrow(diff_88_down) 
 rownames(diff_88_down)
@@ -1592,3 +2181,12 @@ nrow(diff_89)
 rownames(diff_89)
 # 0
 
+
+# ==================================
+# 4. Protein annotation Uniprot
+# ==================================
+# Get gen, organism, protein, function, keywords and go terms
+# ==================================
+# Save annotation
+output_file <- "prot_sig_no_imp.csv"
+write.csv(prot_ann, file = output_file, row.names = TRUE)
