@@ -1,9 +1,11 @@
 #renv::install("nortest")
+#renv::install("ggfortify")
 library(FragPipeAnalystR)
 library(ggplot2)
 library(limma)
 library(vsn)
 library(nortest)
+library(dplyr)
 
 # ==================================
 # 1. Making SummarizedExperiment
@@ -187,14 +189,28 @@ for (i in 1:ncol(data_matrix)) {
 }
 
 # Normal contrast
-p_values <- apply(data_matrix, 2, function(column) pearson.test(column)$p.value)
-normality_results <- p_values > 0.05 # TRUE if normal, FALSE if not
-summary_table <- data.frame(
-  sample = colnames(data_matrix),
+p_values <- apply(data_matrix, 2, function(column) shapiro.test(column)$p.value)
+norm_results <- p_values >= 0.05 # TRUE if normal, FALSE if not
+summary(norm_results)
+norm_results <- data.frame(
+  sample = substring(colnames(data_matrix), 1, 7),
   p_value = p_values,
-  norm = ifelse(normality_results, "Yes", "No")
+  norm = ifelse(norm_results, "1", "0")
 )
-summary(normality_results)
+
+norm_results$frailty <- colData(se_filtered)$frailty
+
+# Percentage normal and not normal
+sum(norm_results$norm == "0")/nrow(norm_results)
+sum(norm_results$norm == "1")/nrow(norm_results)
+
+# Percentage of not normal and normal in frailty patients
+sum(norm_results$norm == "0" & norm_results$frailty == "FT")/sum(norm_results$frailty == "FT")
+sum(norm_results$norm == "1" & norm_results$frailty == "FT")/sum(norm_results$frailty == "FT")
+
+# Percentage of not normal and normal in non-frailty patients
+sum(norm_results$norm == "0" & norm_results$frailty == "NFT")/sum(norm_results$frailty == "NFT")
+sum(norm_results$norm == "1" & norm_results$frailty == "NFT")/sum(norm_results$frailty == "NFT")
 
 #se_norm <- VSN_normalization(se_filtered)
 #data_matrix_norm <- assay(se_norm)
@@ -216,6 +232,14 @@ save(se_no_imp, file = save_path)
 # generated from a shifted and scaled normal distribution based on the existing
 # data
 se_perseus <- manual_impute(se_no_imp)
+
+# Plot PCA
+create_pca_plot(se_perseus, n_top_loadings = 5)
+
+se_no_imp_prepro <- se_no_imp[, colMeans(is.na(assay(se_no_imp))) <= 0.8]
+se_knn <- impute(se_no_imp_prepro, fun = "knn")
+plot_pca(se_knn, x = 1, y = 2, indicate = c("frailty"), point_size = 8, 
+         interactive = TRUE)
 
 # Save SummarizedExperiment imputed
 save_path <- paste0(work_path,"/data/se_perseus.RData")
