@@ -19,6 +19,9 @@ for (file in list.files(unipept_path)) {
                  replicate, ": ", nrow_sample))
     nrow_samples <- c(nrow_samples, nrow_sample)
     assign(df_name, df)
+    # Save LCA output as RData
+    save_path <- paste0(work_path,paste0("/data/",df_name,".RData"))
+    save(df, file = save_path)
   }
 }
 

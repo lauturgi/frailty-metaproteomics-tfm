@@ -1,7 +1,6 @@
 create_pca_plot <- function(se_perseus, n_top_loadings = 5) {
   # Load necessary libraries
   library(ggplot2)
-  library(ggfortify)
   library(dplyr)
   library(ggrepel)
   

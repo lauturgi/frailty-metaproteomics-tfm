@@ -1,5 +1,4 @@
 #renv::install("nortest")
-#renv::install("ggfortify")
 library(FragPipeAnalystR)
 library(ggplot2)
 library(limma)

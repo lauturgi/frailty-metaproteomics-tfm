@@ -64,19 +64,28 @@ echo "$outdir created"
 
 # Process each file in the input directory
 for file in "$indir"/*; do
-	echo "$file"
+    [[ -f "$file" ]] || continue  # Skip if a directory
+
 	# Get the base name of the file
 	filename=$(basename $file | cut -d'.' -f1 )
 
 	echo "Processing $filename ..."
+	
+	numpept=$(cat "$file" | wc -l)
+	
+	echo "El archivo $filename contiene $numpept."
 
 	# Taxonomic analysis
 	if [[ $taxonomy == "yes" ]]; then
 		echo "LCA analysis ..."
 		if [[ $rmdup == "yes" ]]; then
 			cat "$file" | prot2pept | peptfilter | tr I L | sort -u | unipept pept2lca -a > "$outdir/${filename}_lca_output.csv"
+			numpeptfilter=$(cat "$outdir/${filename}_lca_output.csv" | wc -l)
+			echo "El archivo $filename contiene $numpeptfilter tras filtrar por longitud y eliminar duplicados."
 		else
 			cat "$file" | prot2pept | peptfilter | tr I L | unipept pept2lca -a > "$outdir/${filename}_lca_output.csv"
+			numpeptfilter=$(cat "$outdir/${filename}_lca_output.csv" | wc -l)
+			echo "El archivo $filename contiene $numpeptfilter tras filtrar por longitud."
 		fi
 
 		# Check if the command was successful
