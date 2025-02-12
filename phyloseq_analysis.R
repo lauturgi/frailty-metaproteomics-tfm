@@ -5,10 +5,6 @@
 library("phyloseq")
 library("dplyr")
 
-# ==================================
-# Build Phyloseq object
-# ==================================
-
 # Load Unipept LCA output
 data_path <- paste0(getwd(),"/data")
 for (file in list.files(data_path) {
@@ -18,7 +14,7 @@ for (file in list.files(data_path) {
 }
 
 # ==================================
-  # Create OTU table
+# Create OTU table
 # ==================================
 
 # List of LCA dataframes
@@ -29,33 +25,33 @@ otu_list <- list()
 
 # Loop over the dataframes
 for (i in 1:length(unipept_dfs)) {
-  replicate <- unipept_dfs[i]
+  # Get replicate and dataframe from sample i
+  replicate <- substr(unipept_dfs[i], 13, 15)
   df <- get(unipept_dfs[i])
   
   # Count the occurrences of each peptide in the sample
   peptide_counts <- table(df$peptide)
   
   if (i == 1) {
-    # Create OTU matrix from peptide counts
-    otu_table <- as.matrix(peptide_counts)
-    # Rename column with replicate number
-    colnames(otu_table)[i] <- replicate
+    otumat <- as.matrix(peptide_counts)  # Create otumat from peptide_counts
+    colnames(otumat)[i] <- replicate  # Rename column with replicate number
   }
   else {
-    new_col <- rep(NA, nrow(otu_table))  # Create a new column with NA values
-    otu_table <- cbind(otu_table, new_col)  # Add the new column to the matrix
-    colnames(otu_table)[ncol(otu_table)] <- replicate  # Set the column name
+    new_col <- rep(NA, nrow(otumat))  # Create a new column with NA values
+    otumat <- cbind(otumat, new_col)  # Add the new column to the matrix
+    colnames(otumat)[ncol(otumat)] <- replicate  # Set the column name
     
     # Loop through each peptide and update the matrix
     for (peptide in names(peptide_counts)) {
-      if (peptide %in% rownames(otu_table)) {
-        otu_table[peptide, replicate] <- peptide_counts[peptide]
+      if (peptide %in% rownames(otumat)) {
+        # Assign count to the peptide row
+        otumat[peptide, replicate] <- peptide_counts[peptide]
       } else {
         # Add a new row for the new peptide
-        new_row <- rep(NA, ncol(otu_table))
-        otu_table <- rbind(otu_table, new_row)
-        rownames(otu_table)[nrow(otu_table)] <- peptide
-        otu_table[peptide, replicate] <- peptide_counts[peptide]
+        new_row <- rep(NA, ncol(otumat))
+        otumat <- rbind(otumat, new_row)
+        rownames(otumat)[nrow(otumat)] <- peptide
+        otumat[peptide, replicate] <- peptide_counts[peptide]
       }
     }
   }
@@ -65,11 +61,7 @@ for (i in 1:length(unipept_dfs)) {
 # Create taxonomy table
 # ==================================
 # Create an empty matrix with 0 rows and 7 columns for taxonomy
-tax_table <- matrix(ncol = 7, nrow = 0)
-
-# Assign column names
-colnames(tax_table) <- c("superkingdom", "phylum", "class", "order", "family",
-                         "genus", "species")
+taxmat <- matrix(ncol = 7, nrow = 0)
 
 # Loop over the dataframes
 for (i in 1:length(unipept_dfs)) {
@@ -81,26 +73,62 @@ for (i in 1:length(unipept_dfs)) {
                family_name, genus_name, species_name) %>%
       summarize(count = n())
     new_rows <- as.data.frame(new_rows)
-    tax_table <- rbind(tax_table, new_rows[, c("superkingdom_name",
+    taxmat <- rbind(taxmat, new_rows[, c("superkingdom_name",
                                                "phylum_name", "class_name",
                                                "order_name", "family_name",
                                                "genus_name", "species_name")])
-    rownames(tax_table) <- new_rows$peptide
+    rownames(taxmat) <- new_rows$peptide
   }
   else {
     for (j in 1:nrow(df)) {
-      if (df[j, "peptide"] %in% rownames(tax_table)) {
+      if (df[j, "peptide"] %in% rownames(taxmat)) {
         next
       }
       else {
         new_row <- df[j, c("superkingdom_name", "phylum_name", "class_name",
                            "order_name", "family_name", "genus_name",
                            "species_name")]
-        tax_table <- rbind(tax_table, new_row)
-        rownames(tax_table)[nrow(tax_table)] <- df[j, "peptide"]
+        taxmat <- rbind(taxmat, new_row)
+        rownames(taxmat)[nrow(taxmat)] <- df[j, "peptide"]
       }
     }
   }
 }
-  
-  
+
+# Replace empty strings with NA
+taxmat <- apply(taxmat, c(1, 2), function(x) ifelse(x == "", NA, x))
+
+# Assign column names
+colnames(taxmat) <- c("superkingdom", "phylum", "class", "order", "family",
+                      "genus", "species")
+
+
+# ==================================
+# Build Phyloseq object
+# ==================================
+
+OTU <- otu_table(otumat, taxa_are_rows = TRUE)
+TAX <- tax_table(taxmat)
+physeq <- phyloseq(OTU, TAX)
+
+physeq
+
+
+# ==================================
+# Merge sample data
+# ==================================
+
+sampledata <- data.frame(metadata_ft$Fragilidad)
+rownames(sampledata) <- metadata_ft$replicate
+colnames(sampledata)[1] <- "frailty"
+sampledata <- sample_data(sampledata)
+
+physeq <- merge_phyloseq(physeq, sampledata)
+
+
+# ==================================
+# 
+# ==================================
+
+plot_bar(physeq, x = "frailty", fill = "superkingdom")
+plot_heatmap(physeq, taxa.label="superkingdom")
