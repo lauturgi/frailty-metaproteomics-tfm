@@ -32,6 +32,9 @@ summary(nrow_samples)
 # List of LCA dataframes without duplicates
 unipept_dfs <- ls(pattern = "unipept_lca_no_dup")
 
+# Phylum matrix empty
+phylum_mat <- matrix()
+
 # Loop over the dataframes
 for (i in 1:length(unipept_dfs)) {
   # Get replicate and dataframe from sample i
@@ -51,6 +54,19 @@ for (i in 1:length(unipept_dfs)) {
     mutate(parent = "", taxon = "root") %>%
     group_by(taxon, parent) %>%
     summarize(count = n())
+  #assign(paste0("root_",replicate), root)
+  
+  if (i == 1) {
+    phylum_mat <- as.matrix(root$count)
+    colnames(phylum_mat)[i] <- replicate
+    rownames(phylum_mat)[i] <- root$taxon
+  }
+  else {
+    new_col <- rep(NA, nrow(phylum_mat))  # Create a new column with NA values
+    phylum_mat <- cbind(phylum_mat, new_col)  # Add the new column to the matrix
+    colnames(phylum_mat)[ncol(phylum_mat)] <- replicate  # Set the column name
+    phylum_mat["root", replicate] <- root$count # Add root counts to new column
+  }
 
   # Number of peptides that belong to each superkingdom and set root as parent
   superkingdom <- df %>%
@@ -59,6 +75,7 @@ for (i in 1:length(unipept_dfs)) {
     summarize(count = n()) %>%
     filter(superkingdom_name != "") %>%
     rename(taxon = superkingdom_name)
+  #assign(paste0("superking_",replicate), superkingdom)
 
   # Number of peptides that belong to each phylum and set superkingdom as parent
   phylum <- df %>%
@@ -67,7 +84,22 @@ for (i in 1:length(unipept_dfs)) {
     summarize(count = n()) %>%
     filter(phylum_name != "") %>%
     rename(taxon = phylum_name)
-
+  #assign(paste0("phylum_",replicate), phylum)
+  
+  for (j in 1:nrow(phylum)) {
+    phy <- phylum[j, "taxon"]
+    if (phy %in% rownames(phylum_mat){
+      phylum_mat[phy, replicate] <- phylum[j, c("count")] # Add phylum count to replicate column
+    }
+    else {
+      # Add a new row for the replicate
+      new_row <- rep(NA, ncol(phylum_mat))
+      phylum_mat <- rbind(phylum_mat, new_row)
+      rownames(phylum_mat)[nrow(phylum_mat)] <- phy
+      phylum_mat[phy, replicate] <- phylum[j, c("count")]
+    }
+  }
+  
   # Number of peptides that belong to each class and set phylum as parent
   class <- df %>%
     mutate(parent = phylum_name) %>%
@@ -75,6 +107,7 @@ for (i in 1:length(unipept_dfs)) {
     summarize(count = n()) %>%
     filter(class_name != "") %>%
     rename(taxon = class_name)
+  #assign(paste0("class_",replicate), class)
 
   # Number of peptides that belong to each order and set class as parent
   order <- df %>%
@@ -83,7 +116,8 @@ for (i in 1:length(unipept_dfs)) {
     summarize(count = n()) %>%
     filter(order_name != "") %>%
     rename(taxon = order_name)
-
+  #assign(paste0("order_",replicate), order)
+  
   # Number of peptides that belong to each family and set order as parent
   family <- df %>%
     mutate(parent = order_name) %>%
@@ -91,6 +125,8 @@ for (i in 1:length(unipept_dfs)) {
     summarize(count = n()) %>%
     filter(family_name != "") %>%
     rename(taxon = family_name)
+  #assign(paste0("family_",replicate), family)
+  
 
   # Number of peptides that belong to each genus and set family as parent
   genus <- df %>%
@@ -99,6 +135,8 @@ for (i in 1:length(unipept_dfs)) {
     summarize(count = n()) %>%
     filter(genus_name != "") %>%
     rename(taxon = genus_name)
+  #assign(paste0("genus_",replicate), genus)
+  
 
   # Number of peptides that belong to each species and set genus as parent
   species <- df %>%
@@ -107,6 +145,8 @@ for (i in 1:length(unipept_dfs)) {
     summarize(count = n()) %>%
     filter(species_name != "") %>%
     rename(taxon = species_name)
+  #assign(paste0("species_",replicate), species)
+  
 
   # Bind rows for each level
   sunburst <- bind_rows(
@@ -121,23 +161,25 @@ for (i in 1:length(unipept_dfs)) {
   )
 
   # Plot sunburst
-  fig <- plot_ly(
-    data = sunburst,
-    labels = ~taxon,
-    parents = ~parent,
-    values = ~count,
-    type = 'sunburst',
-    branchvalues = 'total'
-  ) %>%
-    layout(
-      title = paste("Sunburst Plot - Replicate", replicate)
-    )
+  #fig <- plot_ly(
+  #  data = sunburst,
+  #  labels = ~taxon,
+  #  parents = ~parent,
+  #  values = ~count,
+  #  type = 'sunburst',
+  #  branchvalues = 'total'
+  #) %>%
+  #  layout(
+  #    title = paste("Sunburst Plot - Replicate", replicate)
+  #  )
 
   # Save the plot
-  file_name <- paste0(work_path,"/plots/unipept_analysis/sunburst_replicate_", replicate, ".png")
-  saveWidget(
-    widget = fig,
-    file = paste0(work_path,"/plots/unipept_analysis/sunburst_",replicate,".html"),
-    selfcontained = TRUE
-  )
+  #file_name <- paste0(work_path,"/plots/unipept_analysis/sunburst_replicate_", replicate, ".png")
+  #saveWidget(
+  #  widget = fig,
+  #  file = paste0(work_path,"/plots/unipept_analysis/sunburst_",replicate,".html"),
+  #  selfcontained = TRUE
+  #)
 }
+
+
