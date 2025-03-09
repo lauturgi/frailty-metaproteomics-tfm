@@ -8,6 +8,8 @@ library(dplyr)
 library(SummarizedExperiment)
 library(reshape2)
 library(ComplexHeatmap)
+library(UniprotR)
+
 #renv::install("bioc::impute")
 #renv::install()
 
@@ -25,10 +27,84 @@ fragpipe_path <- "/mnt/d/proteomica/fragilidad/datos/ProteinIdent/MSfraggerSPbac
 combined_protein <- paste0(fragpipe_path, "combined_protein.tsv")
 experiment_ann <- paste0(fragpipe_path, "experiment_annotation.tsv")
 
+# Read quant table
+prot_quant <- read.table(combined_protein,
+                         header = T,
+                         sep = "\t",
+                         quote = "",
+                         comment.char = "",
+                         blank.lines.skip = F,
+                         check.names = F
+                         )
+# Delete contam rows
+prot_quant <- prot_quant[!grepl("contam", prot_quant$Protein),]
+
+# Take the first identifier per row and make unique names.
+# If there is no name, the ID will be taken.
+prot_uniq <- prot_quant %>%
+  mutate(
+      name = get("Gene"),
+      ID = get("Protein ID"),
+      name = make.unique(ifelse(name == "" | is.na(name), ID, name))
+    )
+
+# Set rownames
+rownames(prot_uniq) <- prot_uniq$ID
+
+# Select MaxLFQ columns
+lfq_col <- grep("MaxLFQ", colnames(prot_uniq))
+prot_maxlfq <- prot_uniq[, lfq_col]
+
+# Replace 0 by NA
+prot_maxlfq[prot_maxlfq == 0] <- NA
+
+
+# Read annotation table
+exp_anno <- read.table(experiment_ann,
+                       header = T,
+                       sep = "\t",
+                       stringsAsFactors = F)
+
+exp_anno$label <- paste(exp_anno$sample, "MaxLFQ.Intensity", sep = " ")
+
+# Set rownames
+rownames(exp_anno) <- exp_anno$label
+
+# Match column names quant with label from annotation
+matched <- match(
+  make.names(exp_anno$label),
+  make.names(colnames(prot_maxlfq))
+  )
+
+# Check if labels in annotation match with column names in quant
+if (any(is.na(matched))) {
+  print(make.names(exp_anno$label))
+  print(make.names(colnames(prot_maxlfq)))
+}
+
+# Set rownames from annotation to sample name
+rownames(exp_anno) <- exp_anno$sample_name
+# Set colnames matched from quant to sample name
+colnames(prot_maxlfq)[matched] <- exp_anno$sample_name
+# Keep column name not NA and reorder
+prot_maxlfq <- prot_maxlfq[, !is.na(colnames(prot_maxlfq))][rownames(exp_anno)]
+
+# Select rowData
+row_data <- prot_uniq[, -lfq_col]
+rownames(row_data) <- prot_uniq$ID
+
+# Make SummarizedExperiment
+se <- SummarizedExperiment(
+  assays = as.matrix(prot_maxlfq),
+  colData = exp_anno,
+  rowData = row_data,
+  metadata = list("log2transform"=F, "lfq_type"="MaxLFQ",
+                  "level"="protein")
+)
 # Make summarizedExperiment
 # By default, make_se_from_files applies a log2 transformation
-se <- make_se_from_files(combined_protein, experiment_ann, type = "LFQ",
-                         level = "protein", lfq_type = "MaxLFQ")
+#se <- make_se_from_files(combined_protein, experiment_ann, type = "LFQ",
+#                         level = "protein", lfq_type = "MaxLFQ")
 
 # Check class of se object
 class(se)
@@ -91,9 +167,12 @@ colData(se)$sex <- metadata_ft$w23sex
 # 7: Menos de una vez al mes --> 1
 # 8: No en los últimos 12 meses, he dejado de tomar alcohol --> 0
 # 9: Nunca o solamente unos sorbos para probar a lo largo de toda la vida --> 0
-colData(se)$alcohol <- factor(ifelse(metadata_ft$w23alcohol %in% c("1", "2", "3", "4"), "2",
-                              ifelse(metadata_ft$w23alcohol %in% c("5", "6", "7"), "1",
-                                     ifelse(metadata_ft$w23alcohol %in% c("8", "9"), "0", NA)
+colData(se)$alcohol <- factor(ifelse(metadata_ft$w23alcohol %in% 
+                                       c("1", "2", "3", "4"), "2",
+                              ifelse(metadata_ft$w23alcohol %in% 
+                                       c("5", "6", "7"), "1",
+                                     ifelse(metadata_ft$w23alcohol %in% 
+                                              c("8", "9"), "0", NA)
                                      )
                               ), levels = c("0", "1", "2"))
 
@@ -131,7 +210,9 @@ save_path <- paste0(work_path,"/data/se.RData")
 save(se, file = save_path)
 
 # ==================================
-# 4. Missing
+# 4. Filtering
+# ==================================
+# 4.1. By Missing
 # ==================================
 
 # Get protein intensities matrix from SummarizedExperiment
@@ -185,12 +266,13 @@ summary(num_prot_sample)
 #                   Max.   :1101.0  
 
 # Check proteins detected in samples with a low detection
-rownames(se_assay[!is.na(se_assay[,"YDD_248 MaxLFQ.Intensity"]), ])
+rownames(se_assay[!is.na(se_assay[,"YDD_248"]), ])
 
 # Density plot number of proteins per sample in FT vs NFT
 ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
   geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of proteins per sample", x = "Number of proteins", y = "Density") +
+  labs(title = "Number of proteins per sample", x = "Number of proteins", 
+       y = "Density") +
   scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
   theme_minimal()
 
@@ -249,7 +331,8 @@ Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE,
         # cluster_rows = FALSE,
         column_split = colData(se)$frailty, 
         clustering_distance_rows = "binary", 
-        clustering_distance_columns = "binary")
+        clustering_distance_columns = "binary", 
+        use_raster = FALSE)
 
 # Annotation of columns by frailty group
 column_ann <- HeatmapAnnotation(frailty = colData(se)$frailty,
@@ -261,11 +344,10 @@ Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE,
         # cluster_rows = FALSE,
         clustering_distance_rows = "binary", 
         clustering_distance_columns = "binary",
-        top_annotation = column_ann)
+        top_annotation = column_ann, 
+        use_raster = FALSE)
 
-# ==================================
-# 4.1. Filtering missing by sample proportion
-# ==================================
+# Filter missing by sample proportion
 
 # Sample proportion for each protein
 presence_proportion <- rowSums(!is.na(se_assay)) / ncol(se_assay)
@@ -293,7 +375,8 @@ sum(presence_proportion == 1)
 rownames(se_assay[presence_proportion == 1,])
 # P00761 --> trypsin
 # P04264 --> Keratin, type II cytoskeletal 1
-# P06702 --> Protein S100-A9: regulation of inflammatory processes and immune response
+# P06702 --> Protein S100-A9: regulation of inflammatory processes and
+# immune response
 
 # Proteins in more than 75% of samples
 rownames(se_assay[presence_proportion >= 0.75,])
@@ -305,7 +388,7 @@ rownames(se_assay[presence_proportion < 0.5,])
 # ANALIZAR PROTEINAS PRESENTES EN < 50% DE LAS MUESTRAS #
 #########################################################
 
-# Keep proteins with a minimum fraction of valid values in at least one condition
+# Keep proteins with minimum fraction of valid values in at least one condition
 min_fraction <- 0.5
 fraction_ft <- apply(se_assay[,colData(se)$frailty == "FT"], 1,
                      function(x) sum(!is.na(x)) / length(x))
@@ -353,7 +436,8 @@ summary(num_prot_sample)
 # Density plot number of proteins per sample in FT vs NFT
 ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
   geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of proteins per sample", x = "Number of proteins", y = "Density") +
+  labs(title = "Number of proteins per sample", x = "Number of proteins", 
+       y = "Density") +
   scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
   theme_minimal()
 
@@ -434,56 +518,166 @@ Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE,
 save_path <- paste0(work_path,"/data/se_filtered.RData")
 save(se_filtered, file = save_path)
 
+# ==================================
+# 4.2. By organism
+# ==================================
+# Get lineage from UniProt
+lineage_df <- GetProteinAnnontate(rownames(se_filtered_assay),
+                                  columns = c("lineage"))
+lineage_df <- as.data.frame(lineage_df)
+lineage_df$protein_id <- rownames(se_filtered_assay)
+colnames(lineage_df)[colnames(lineage_df) == "lineage_df"] <- "lineage"
+# Get superkingdom from lineage
+lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","), function(x) x[2])
+
+# Get protein_id from bacteria proteins
+proteins_to_keep <- lineage_df[grep("Bacteria", lineage_df$superkingdom) , 
+                               "protein_id"]
+# Filter SummarizedExperiment
+se_filt_bact <- se_filtered[proteins_to_keep, ]
+
+# Number of proteins after filtering no bacteria proteins
+nrow(se_filt_bact)
+# 163
+
+se_filt_bact_assay <- assay(se_filt_bact)
 
 # ==================================
 # 5. Normalization
 # ==================================
+# Boxplot
+se_filt_bact_df <- as.data.frame(se_filt_bact_assay)
+se_filt_bact_df$protein_id <- rownames(se_filt_bact_df)
+rownames(se_filt_bact_df) <- NULL
+se_filt_bact_long <- melt(se_filt_bact_df)
+colnames(se_filt_bact_long) <- c("protein_id", "Samples", "MaxLFQ")
+head(se_filt_bact_long)
+se_filt_bact_long$Samples <- substr(se_filt_bact_long$Samples, 1, 7)
+se_filt_bact_long <- as.data.frame(merge(se_filt_bact_long, 
+                                        colData(se_filt_bact)[,c("sample", 
+                                                                "frailty")], 
+                                        by.x = "Samples", by.y = "sample"))
+# Summary MaxLFQ to set limit to y axis
+summary(se_filt_bact_long$MaxLFQ)
+
+# Plot MaxLFQ vs samples
+ggplot(se_filt_bact_long, aes(x = Samples, y = MaxLFQ, fill = frailty)) + 
+  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
+  theme(
+    axis.text.x = element_text(angle = 90, size = 6),
+    legend.position = c(0.95, 0.95),
+    legend.background = element_rect(fill = alpha("white", 0.5))) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
+  ylim(0, 250000) +
+  facet_wrap(~frailty, scales = "free_x", ncol = 1)
+
+# Plot MaxLFQ vs frailty group
+ggplot(se_filt_bact_long, aes(x = frailty, y = MaxLFQ, fill = frailty)) + 
+  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
+  theme(
+    axis.text.x = element_text(angle = 90, size = 6),
+    legend.position = c(0.95, 0.95),
+    legend.background = element_rect(fill = alpha("white", 0.5))) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
+  ylim(0, 250000)
 
 # Intensities density plot
-summary(data_matrix)
-plotDensities(data_matrix, legend = FALSE)
-meanSdPlot(data_matrix)
-#plotMA(data_matrix)
+ggplot(se_filt_bact_long, aes(x = MaxLFQ)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  theme_minimal()# + 
+  #xlim(0, 500000)
 
-#se_norm <- VSN_normalization(se_filtered)
-#data_matrix_norm <- assay(se_norm)
-#plotDensities(data_matrix_norm, legend = FALSE)
-#meanSdPlot(data_matrix_norm)
+# Quantile 95%
+q99 <- quantile(se_filt_bact_long$MaxLFQ, 0.99, na.rm = TRUE)
+
+# Get proteins with intensities higher than q95
+#se_filt_long_q99 <- se_filtered_long[se_filtered_long$MaxLFQ > q99, ]
+#se_filt_long_q99 <- se_filt_long_q99[!is.na(se_filt_long_q99), ]
+#unique(se_filt_long_q99$protein_id)
+
+# Intensities density plot per sample
+plotDensities(se_filtered_assay, legend = FALSE)
+
+for (i in 1:nrow(se_filtered_assay)){
+  plotDensities(se_filtered_assay[, i], legend = TRUE)
+}
+
+# Standard deviation (sd) and mean are calculated row-wise from the expression
+# matrix. The scatterplot of these versus each other to verify whether there is
+# a dependence # of the sd on the mean. The red line running median estimator
+# (window-width 10%). If there is no variance-mean dependence, the line should
+# be aprox. horizontal.
+meanSdPlot(se_filtered_assay)
+
+#plotMA(se_filtered_assay)
 
 # Q-Q sample quantiles vs theoretical quantiles for a normal distribution
-for (i in 1:ncol(data_matrix)) {
-  qqnorm(data_matrix[, i], main = paste("QQ Plot -", colnames(data_matrix)[i]))
-  qqline(data_matrix[, i], col = "red")
+for (i in 1:ncol(se_filtered_assay)) {
+  qqnorm(se_filtered_assay[, i], main = paste("QQ Plot -", 
+                                              colnames(se_filtered_assay)[i]))
+  qqline(se_filtered_assay[, i], col = "red")
 }
 
 # Normal contrast
-p_values <- apply(data_matrix, 2, function(column) shapiro.test(column)$p.value)
+p_values <- apply(se_filtered_assay, 2,
+                  function(column) shapiro.test(column)$p.value)
 norm_results <- p_values >= 0.05 # TRUE if normal, FALSE if not
 summary(norm_results)
-norm_results <- data.frame(
-  sample = substring(colnames(data_matrix), 1, 7),
-  p_value = p_values,
-  norm = ifelse(norm_results, "1", "0")
-)
+#    Mode   FALSE    TRUE 
+#logical     172      31 
 
-norm_results$frailty <- colData(se_filtered)$frailty
+#norm_results <- data.frame(
+#  sample = substring(colnames(se_filtered_assay), 1, 7),
+#  p_value = p_values,
+#  norm = ifelse(norm_results, "1", "0")
+#)
+
+#norm_results$frailty <- colData(se_filtered)$frailty
 
 # Percentage normal and not normal
-sum(norm_results$norm == "0")/nrow(norm_results)
-sum(norm_results$norm == "1")/nrow(norm_results)
+#sum(norm_results$norm == "0")/nrow(norm_results)
+#sum(norm_results$norm == "1")/nrow(norm_results)
 
 # Percentage of not normal and normal in frailty patients
-sum(norm_results$norm == "0" & norm_results$frailty == "FT")/
-  sum(norm_results$frailty == "FT")
-sum(norm_results$norm == "1" & norm_results$frailty == "FT")/
-  sum(norm_results$frailty == "FT")
+#sum(norm_results$norm == "0" & norm_results$frailty == "FT")/
+#  sum(norm_results$frailty == "FT")
+#sum(norm_results$norm == "1" & norm_results$frailty == "FT")/
+#  sum(norm_results$frailty == "FT")
 
 # Percentage of not normal and normal in non-frailty patients
-sum(norm_results$norm == "0" & norm_results$frailty == "NFT")/
-  sum(norm_results$frailty == "NFT")
-sum(norm_results$norm == "1" & norm_results$frailty == "NFT")/
-  sum(norm_results$frailty == "NFT")
+#sum(norm_results$norm == "0" & norm_results$frailty == "NFT")/
+#  sum(norm_results$frailty == "NFT")
+#sum(norm_results$norm == "1" & norm_results$frailty == "NFT")/
+#  sum(norm_results$frailty == "NFT")
 
+# Normalization
+# se_norm <- VSN_normalization(se_filtered)
+fit = vsn2(se_filtered)
+se_norm = predict(fit, se_filtered)
+se_norm_assay <- assay(se_norm)
+
+# Intensities density plot per sample
+plotDensities(se_norm_assay, legend = FALSE)
+
+for (i in 1:nrow(se_norm_assay)){
+  plotDensities(se_norm_assay[, i], legend = TRUE)
+}
+
+meanSdPlot(se_norm_assay)
+
+# Normal contrast
+p_values <- apply(se_norm_assay, 2,
+                  function(column) shapiro.test(column)$p.value)
+norm_results <- p_values >= 0.05 # TRUE if normal, FALSE if not
+summary(norm_results)
+#    Mode   FALSE    TRUE 
+#logical     172      31 
+
+# ==================================
+# 6. Imputation
+# ==================================
+# 6.1. No imputation
+# ==================================
 se_no_imp <- se_filtered
 
 # Save SummarizedExperiment no imputated
@@ -491,11 +685,9 @@ save_path <- paste0(work_path,"/data/se_no_imp.RData")
 save(se_no_imp, file = save_path)
 
 # ==================================
-# 6. Imputation
+# 6.2. Impute missing values
 # ==================================
-# Impute missing values
-# ==================================
-# 6.1. Perseus
+# 6.2.1. Perseus
 # ==================================
 # Missing values are replaced with random values generated from a shifted and
 # scaled normal distribution based on the existing data
