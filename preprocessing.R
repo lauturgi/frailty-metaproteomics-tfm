@@ -1,4 +1,5 @@
 #renv::install("nortest")
+#renv::install("bioc::impute")
 library(FragPipeAnalystR)
 library(ggplot2)
 library(limma)
@@ -9,9 +10,7 @@ library(SummarizedExperiment)
 library(reshape2)
 library(ComplexHeatmap)
 library(UniprotR)
-
-#renv::install("bioc::impute")
-#renv::install()
+library(impute)
 
 # ==================================
 # 1. Making SummarizedExperiment
@@ -21,7 +20,6 @@ library(UniprotR)
 work_path <- getwd()
 
 # Path to combined_protein.tsv and experiment_annotation.tsv
-
 fragpipe_path <- "/mnt/d/proteomica/fragilidad/datos/ProteinIdent/MSfraggerSPbacteria/DatosProtIdentCombinados/"
 
 combined_protein <- paste0(fragpipe_path, "combined_protein.tsv")
@@ -36,11 +34,12 @@ prot_quant <- read.table(combined_protein,
                          blank.lines.skip = F,
                          check.names = F
                          )
+
 # Delete contam rows
 prot_quant <- prot_quant[!grepl("contam", prot_quant$Protein),]
 
-# Take the first identifier per row and make unique names.
-# If there is no name, the ID will be taken.
+# Take first identifier per row and make unique names. If there is no name, then
+# ID will be taken
 prot_uniq <- prot_quant %>%
   mutate(
       name = get("Gene"),
@@ -57,7 +56,6 @@ prot_maxlfq <- prot_uniq[, lfq_col]
 
 # Replace 0 by NA
 prot_maxlfq[prot_maxlfq == 0] <- NA
-
 
 # Read annotation table
 exp_anno <- read.table(experiment_ann,
@@ -89,7 +87,7 @@ colnames(prot_maxlfq)[matched] <- exp_anno$sample_name
 # Keep column name not NA and reorder
 prot_maxlfq <- prot_maxlfq[, !is.na(colnames(prot_maxlfq))][rownames(exp_anno)]
 
-# Select rowData
+# Create rowData
 row_data <- prot_uniq[, -lfq_col]
 rownames(row_data) <- prot_uniq$ID
 
@@ -101,15 +99,11 @@ se <- SummarizedExperiment(
   metadata = list("log2transform"=F, "lfq_type"="MaxLFQ",
                   "level"="protein")
 )
-# Make summarizedExperiment
-# By default, make_se_from_files applies a log2 transformation
-#se <- make_se_from_files(combined_protein, experiment_ann, type = "LFQ",
-#                         level = "protein", lfq_type = "MaxLFQ")
 
 # Check class of se object
 class(se)
 
-# Check log2 (TRUE), exp (LFQ), lfq_type (MaxLFQ), level (protein)
+# Check log2, exp, lfq_type and level
 metadata(se)
 
 # Check number of rows and columns
@@ -205,17 +199,13 @@ create_bar_plot(colData(se), "alcohol", title = paste("Bar plot for",
 create_bar_plot(colData(se), "ilef", title = paste("Bar plot for", "ILEF"), 
                 paste0(work_path,"/plots/bar_plot_", "ILEF",".png"))
 
-# Save SummarizedExperiment
-save_path <- paste0(work_path,"/data/se.RData")
-save(se, file = save_path)
-
 # ==================================
 # 4. Filtering
 # ==================================
 # 4.1. By Missing
 # ==================================
 
-# Get protein intensities matrix from SummarizedExperiment
+# Get intensities matrix from SummarizedExperiment
 se_assay <- assay(se)
 
 # Number of proteins
@@ -235,6 +225,13 @@ sum(!proteins_to_keep)
 # Filter proteins with all NA
 se_assay <- se_assay[proteins_to_keep, ]
 se <- se[proteins_to_keep,]
+
+# Save SummarizedExperiment
+save_path <- paste0(work_path,"/data/se.RData")
+save(se, file = save_path)
+
+# Get colData from SummarizedExperiment
+col_data <- as.data.frame(colData(se))
 
 # Number of proteins after filtering those with all NA
 nrow(se_assay)
@@ -276,7 +273,6 @@ ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
   scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
   theme_minimal()
 
-
 # Number of missing per sample
 num_na_sample <- apply(se_assay, 2, function(x) sum(is.na(x)))
 num_na_sample <- as.data.frame(num_na_sample)
@@ -294,7 +290,6 @@ ggplot(num_na_sample, aes(x = NAs, fill = frailty)) +
   scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
   theme_minimal()
 
-
 # Make binary assay (1 = valid value, 0 = missing value)
 missval <- ifelse(is.na(se_assay), 0, 1)
 colnames(missval) <- substr(colnames(missval), 1, 7)
@@ -309,7 +304,6 @@ colnames(df) <- c("protein", "sample", "intensity")
 df$sample <- substr(df$sample, 1, 7)
 
 # Add frailty group
-col_data <- as.data.frame(colData(se))
 df <- merge(df, col_data[, c("sample", "frailty")], by = "sample")
 
 # Plot heatmap
@@ -403,18 +397,18 @@ sum(proteins_to_keep)
 # 185
 
 # Filter SummarizedExperiment
-se_filtered <- se[proteins_to_keep, ]
+se_filt_miss <- se[proteins_to_keep, ]
 
 # Get protein intensities matrix from filtered SummarizedExperiment
-se_filtered_assay <- assay(se_filtered)
+se_filt_miss_assay <- assay(se_filt_miss)
 
 # Number of proteins after filtering those present in <50% of samples in both
 # conditions
-nrow(se_filtered_assay)
+nrow(se_filt_miss_assay)
 # 185
 
 # Number of proteins detected per sample
-num_prot_sample <- apply(se_filtered_assay, 2, function(x) sum(!is.na(x)))
+num_prot_sample <- apply(se_filt_miss_assay, 2, function(x) sum(!is.na(x)))
 num_prot_sample <- as.data.frame(num_prot_sample)
 colnames(num_prot_sample) <- "Proteins"
 num_prot_sample$Sample <- substr(rownames(num_prot_sample), 1, 7)
@@ -441,14 +435,13 @@ ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
   scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
   theme_minimal()
 
-
 # Number of NA values in assay
-table(is.na(se_filtered_assay))
+table(is.na(se_filt_miss_assay))
 # FALSE  TRUE 
 # 25894 11661 
 
 # Number of missing per sample
-num_na_sample <- apply(se_filtered_assay, 2, function(x) sum(is.na(x)))
+num_na_sample <- apply(se_filt_miss_assay, 2, function(x) sum(is.na(x)))
 num_na_sample <- as.data.frame(num_na_sample)
 colnames(num_na_sample) <- "NAs"
 num_na_sample$Sample <- substr(rownames(num_na_sample), 1, 7)
@@ -465,7 +458,7 @@ ggplot(num_na_sample, aes(x = NAs, fill = frailty)) +
   theme_minimal()
 
 # Make binary assay (1 = valid value, 0 = missing value)
-missval <- ifelse(is.na(se_filtered_assay), 0, 1)
+missval <- ifelse(is.na(se_filt_miss_assay), 0, 1)
 colnames(missval) <- substr(colnames(missval), 1, 7)
 
 # Convert matrix to long format dataframe
@@ -478,7 +471,6 @@ colnames(df) <- c("protein", "sample", "intensity")
 df$sample <- substr(df$sample, 1, 7)
 
 # Add frailty group
-col_data <- as.data.frame(colData(se))
 df <- merge(df, col_data[, c("sample", "frailty")], by = "sample")
 
 # Plot heatmap
@@ -498,12 +490,12 @@ Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE,
         column_names_gp = gpar(fontsize = 4), show_row_names = FALSE, 
         # cluster_columns = FALSE,
         # cluster_rows = FALSE,
-        column_split = colData(se_filtered)$frailty, 
+        column_split = col_data$frailty, 
         clustering_distance_rows = "binary", 
         clustering_distance_columns = "binary")
 
 # Annotation of columns by frailty group
-column_ann <- HeatmapAnnotation(frailty = colData(se_filtered)$frailty,
+column_ann <- HeatmapAnnotation(frailty = col_data$frailty,
                                 col = list(frailty = c("FT" = "red", 
                                                        "NFT" = "blue")))
 Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE, 
@@ -514,27 +506,24 @@ Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE,
         clustering_distance_columns = "binary",
         top_annotation = column_ann)
 
-# Save SummarizedExperiment filtered
-save_path <- paste0(work_path,"/data/se_filtered.RData")
-save(se_filtered, file = save_path)
-
 # ==================================
 # 4.2. By organism
 # ==================================
 # Get lineage from UniProt
-lineage_df <- GetProteinAnnontate(rownames(se_filtered_assay),
+lineage_df <- GetProteinAnnontate(rownames(se_filt_miss_assay),
                                   columns = c("lineage"))
 lineage_df <- as.data.frame(lineage_df)
-lineage_df$protein_id <- rownames(se_filtered_assay)
+lineage_df$protein_id <- rownames(se_filt_miss_assay)
 colnames(lineage_df)[colnames(lineage_df) == "lineage_df"] <- "lineage"
 # Get superkingdom from lineage
-lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","), function(x) x[2])
+lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","),
+                                  function(x) x[2])
 
 # Get protein_id from bacteria proteins
-proteins_to_keep <- lineage_df[grep("Bacteria", lineage_df$superkingdom) , 
+proteins_to_keep <- lineage_df[grep("Bacteria", lineage_df$superkingdom), 
                                "protein_id"]
 # Filter SummarizedExperiment
-se_filt_bact <- se_filtered[proteins_to_keep, ]
+se_filt_bact <- se_filt_miss[proteins_to_keep, ]
 
 # Number of proteins after filtering no bacteria proteins
 nrow(se_filt_bact)
@@ -543,57 +532,82 @@ nrow(se_filt_bact)
 se_filt_bact_assay <- assay(se_filt_bact)
 
 # ==================================
-# 5. Normalization
+# 4.3. By abundance
 # ==================================
-# Boxplot
-se_filt_bact_df <- as.data.frame(se_filt_bact_assay)
-se_filt_bact_df$protein_id <- rownames(se_filt_bact_df)
-rownames(se_filt_bact_df) <- NULL
-se_filt_bact_long <- melt(se_filt_bact_df)
-colnames(se_filt_bact_long) <- c("protein_id", "Samples", "MaxLFQ")
-head(se_filt_bact_long)
-se_filt_bact_long$Samples <- substr(se_filt_bact_long$Samples, 1, 7)
-se_filt_bact_long <- as.data.frame(merge(se_filt_bact_long, 
-                                        colData(se_filt_bact)[,c("sample", 
-                                                                "frailty")], 
-                                        by.x = "Samples", by.y = "sample"))
-# Summary MaxLFQ to set limit to y axis
-summary(se_filt_bact_long$MaxLFQ)
+# - Ribosome subunits
+# - Elongation factor Tu
+# - Chaperones?
+# - ?
+# ==================================
+se_filtered <- se_filt_bact[-grep("ribosomal", rowData(se_filt_bact)$Description), ]
+se_filtered <- se_filtered[-grep("Elongation factor Tu", rowData(se_filtered)$Description), ]
+se_filtered_assay <- assay(se_filtered)
 
+nrow(se_filtered_assay)
+
+# Save SummarizedExperiment filtered
+save_path <- paste0(work_path,"/data/se_filtered.RData")
+save(se_filtered, file = save_path)
+
+# Boxplot maxlfq after filtering
+res <- create_maxlfq_boxplot(se_filtered, col_data)
+print(res$plot_samples)
+print(res$plot_groups)
+print(res$maxlfq_summary)
+
+# Transform se_filtered matrix to long dataframe
+#se_filtered_df <- as.data.frame(se_filtered_assay)
+#se_filtered_df$protein_id <- rownames(se_filtered_df)
+#rownames(se_filtered_df) <- NULL
+#se_filtered_long <- melt(se_filtered_df)
+#colnames(se_filtered_long) <- c("protein_id", "Samples", "MaxLFQ")
+#head(se_filtered_long)
+#se_filtered_long$Samples <- substr(se_filtered_long$Samples, 1, 7)
+#se_filtered_long <- as.data.frame(merge(se_filtered_long, 
+#                                        col_data[,c("sample", "frailty")], 
+#                                        by.x = "Samples", by.y = "sample"))
+#
+#summary(se_filtered_long$MaxLFQ)
+#
 # Plot MaxLFQ vs samples
-ggplot(se_filt_bact_long, aes(x = Samples, y = MaxLFQ, fill = frailty)) + 
-  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
-  theme(
-    axis.text.x = element_text(angle = 90, size = 6),
-    legend.position = c(0.95, 0.95),
-    legend.background = element_rect(fill = alpha("white", 0.5))) + 
-  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
-  ylim(0, 250000) +
-  facet_wrap(~frailty, scales = "free_x", ncol = 1)
-
+#ggplot(se_filtered_long, aes(x = Samples, y = MaxLFQ, fill = frailty)) + 
+#  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
+#  theme(
+#    axis.text.x = element_text(angle = 90, size = 6),
+#    legend.position = c(0.95, 0.95),
+#    legend.background = element_rect(fill = alpha("white", 0.5))) + 
+#  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
+#  ylim(0, 250000) +
+#  facet_wrap(~frailty, scales = "free_x", ncol = 1)
+#
 # Plot MaxLFQ vs frailty group
-ggplot(se_filt_bact_long, aes(x = frailty, y = MaxLFQ, fill = frailty)) + 
-  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
-  theme(
-    axis.text.x = element_text(angle = 90, size = 6),
-    legend.position = c(0.95, 0.95),
-    legend.background = element_rect(fill = alpha("white", 0.5))) + 
-  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
-  ylim(0, 250000)
+#ggplot(se_filtered_long, aes(x = frailty, y = MaxLFQ, fill = frailty)) + 
+#  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
+#  theme(
+#    axis.text.x = element_text(angle = 90, size = 6),
+#    legend.position = c(0.95, 0.95),
+#    legend.background = element_rect(fill = alpha("white", 0.5))) + 
+#  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
+#  ylim(0, 250000)
 
 # Intensities density plot
-ggplot(se_filt_bact_long, aes(x = MaxLFQ)) +
+ggplot(se_filtered_long, aes(x = MaxLFQ)) +
   geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()# + 
-  #xlim(0, 500000)
+  theme_minimal() + 
+  xlim(0, 500000)
 
-# Quantile 95%
-q99 <- quantile(se_filt_bact_long$MaxLFQ, 0.99, na.rm = TRUE)
+# Get proteins with intensities higher than percentile 95%
+#Q95 <- quantile(se_filtered_long$MaxLFQ, 0.95, na.rm = TRUE)
+#se_filtered_long_q95 <- se_filtered_long[se_filtered_long$MaxLFQ > Q95, ]
+#se_filtered_long_q95 <- se_filtered_long_q95[!is.na(se_filtered_long_q95), ]
+#prot_q95 <-  se_filtered_long_q95 %>% arrange(desc(MaxLFQ))
+#prot_q95 <- unique(prot_q95$protein_id)
+#prot_q95_ann <- GetProteinAnnontate(prot_q95,columns = c("gene_primary",
+#                                                         "organism_name",
+#                                                          "protein_name",
+#                                                          "cc_function"))
+#write.csv2(prot_q95_ann, "prot_q95_ann.csv")
 
-# Get proteins with intensities higher than q95
-#se_filt_long_q99 <- se_filtered_long[se_filtered_long$MaxLFQ > q99, ]
-#se_filt_long_q99 <- se_filt_long_q99[!is.na(se_filt_long_q99), ]
-#unique(se_filt_long_q99$protein_id)
 
 # Intensities density plot per sample
 plotDensities(se_filtered_assay, legend = FALSE)
@@ -604,7 +618,7 @@ for (i in 1:nrow(se_filtered_assay)){
 
 # Standard deviation (sd) and mean are calculated row-wise from the expression
 # matrix. The scatterplot of these versus each other to verify whether there is
-# a dependence # of the sd on the mean. The red line running median estimator
+# a dependence of the sd on the mean. The red line running median estimator
 # (window-width 10%). If there is no variance-mean dependence, the line should
 # be aprox. horizontal.
 meanSdPlot(se_filtered_assay)
@@ -624,37 +638,30 @@ p_values <- apply(se_filtered_assay, 2,
 norm_results <- p_values >= 0.05 # TRUE if normal, FALSE if not
 summary(norm_results)
 #    Mode   FALSE    TRUE 
-#logical     172      31 
+#logical     172      31
 
-#norm_results <- data.frame(
-#  sample = substring(colnames(se_filtered_assay), 1, 7),
-#  p_value = p_values,
-#  norm = ifelse(norm_results, "1", "0")
-#)
+# ==================================
+# 5. Normalization
+# ==================================
+# 5.1. vsn
+# ==================================
 
-#norm_results$frailty <- colData(se_filtered)$frailty
-
-# Percentage normal and not normal
-#sum(norm_results$norm == "0")/nrow(norm_results)
-#sum(norm_results$norm == "1")/nrow(norm_results)
-
-# Percentage of not normal and normal in frailty patients
-#sum(norm_results$norm == "0" & norm_results$frailty == "FT")/
-#  sum(norm_results$frailty == "FT")
-#sum(norm_results$norm == "1" & norm_results$frailty == "FT")/
-#  sum(norm_results$frailty == "FT")
-
-# Percentage of not normal and normal in non-frailty patients
-#sum(norm_results$norm == "0" & norm_results$frailty == "NFT")/
-#  sum(norm_results$frailty == "NFT")
-#sum(norm_results$norm == "1" & norm_results$frailty == "NFT")/
-#  sum(norm_results$frailty == "NFT")
-
-# Normalization
-# se_norm <- VSN_normalization(se_filtered)
-fit = vsn2(se_filtered)
-se_norm = predict(fit, se_filtered)
+fit <- vsnMatrix(se_filtered_assay)
+se_norm <- se_filtered
+assay(se_norm) <- predict(fit, se_filtered_assay)
 se_norm_assay <- assay(se_norm)
+
+# Boxplot maxlfq after vsn
+res <- create_maxlfq_boxplot(se_norm, col_data)
+print(res$plot_samples)
+print(res$plot_groups)
+print(res$maxlfq_summary)
+
+# Intensities density plot
+ggplot(se_norm_long, aes(x = MaxLFQ)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  theme_minimal() #+ 
+#xlim(0, 500000)
 
 # Intensities density plot per sample
 plotDensities(se_norm_assay, legend = FALSE)
@@ -663,6 +670,7 @@ for (i in 1:nrow(se_norm_assay)){
   plotDensities(se_norm_assay[, i], legend = TRUE)
 }
 
+# Scatterplot
 meanSdPlot(se_norm_assay)
 
 # Normal contrast
@@ -674,11 +682,38 @@ summary(norm_results)
 #logical     172      31 
 
 # ==================================
+# 5.2. Log 2 transform
+# ==================================
+
+# Just log2
+se_log <- se_filtered
+assay(se_log) <- log2(assay(se_log))
+se_log_assay <- assay(se_log)
+
+# Boxplot maxlfq after log2
+res <- create_maxlfq_boxplot(se_log, col_data)
+print(res$plot_samples)
+print(res$plot_groups)
+print(res$maxlfq_summary)
+
+# Intensities density plot
+ggplot(se_log_long, aes(x = MaxLFQ)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  theme_minimal() #+ 
+#xlim(0, 500000)
+
+# Intensities density plot per sample
+plotDensities(se_log_assay, legend = FALSE)
+
+# Scatterplot
+meanSdPlot(se_log_assay)
+
+# ==================================
 # 6. Imputation
 # ==================================
 # 6.1. No imputation
 # ==================================
-se_no_imp <- se_filtered
+se_no_imp <- se_log
 
 # Save SummarizedExperiment no imputated
 save_path <- paste0(work_path,"/data/se_no_imp.RData")
@@ -696,14 +731,54 @@ se_perseus <- manual_impute(se_no_imp)
 # Plot PCA
 create_pca_plot(se_perseus, n_top_loadings = 5)
 
-# ==================================
-# 6.2. KNN
-# ==================================
-se_no_imp_prepro <- se_no_imp[, colMeans(is.na(assay(se_no_imp))) <= 0.8]
-se_knn <- impute(se_no_imp_prepro, fun = "knn")
-plot_pca(se_knn, x = 1, y = 2, indicate = c("frailty"), point_size = 8, 
-         interactive = TRUE)
+# Boxplot maxlfq after perseus
+res <- create_maxlfq_boxplot(se_perseus, col_data)
+print(res$plot_samples)
+print(res$plot_groups)
+print(res$maxlfq_summary)
+
+# Intensities density plot
+ggplot(se_perseus_long, aes(x = MaxLFQ)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  theme_minimal() #+ 
+#xlim(0, 500000)
+
+# Intensities density plot per sample
+plotDensities(se_perseus_assay, legend = FALSE)
 
 # Save SummarizedExperiment imputed
 save_path <- paste0(work_path,"/data/se_perseus.RData")
 save(se_perseus, file = save_path)
+
+
+# ==================================
+# 6.2.2. KNN
+# ==================================
+# Delete 10 samples with more than 80% missing values
+se_knn <- se_no_imp
+se_knn <- se_knn[, colMeans(is.na(assay(se_knn))) <= 0.8]
+
+# Impute using k-nearest neighbors
+assay(se_knn) <- impute.knn(assay(se_knn), rowmax = 0.6)$data
+
+# Plot PCA
+create_pca_plot(se_knn, n_top_loadings = 5)
+
+# Boxplot maxlfq after knn
+res <- create_maxlfq_boxplot(se_knn, col_data)
+print(res$plot_samples)
+print(res$plot_groups)
+print(res$maxlfq_summary)
+
+# Intensities density plot
+ggplot(se_knn_long, aes(x = MaxLFQ)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  theme_minimal() #+ 
+#xlim(0, 500000)
+
+# Intensities density plot per sample
+plotDensities(se_knn_assay, legend = FALSE)
+
+# Save SummarizedExperiment imputed
+save_path <- paste0(work_path,"/data/se_knn.RData")
+save(se_knn, file = save_path)
