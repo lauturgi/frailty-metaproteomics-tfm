@@ -2,7 +2,7 @@
 library(ggplot2)
 
 # Bar plot function
-create_bar_plot <- function(data, variable, title = "Bar Plot", save_path = paste0("bar_plot_", variable, ".png")) {
+create_bar_plot <- function(data, variable, title = "Bar Plot") {
   # Create the bar plot
   p <- ggplot(data, aes(x = .data[[variable]], fill = .data[[variable]])) +
     geom_bar() +
@@ -14,6 +14,6 @@ create_bar_plot <- function(data, variable, title = "Bar Plot", save_path = past
   # Print the plot
   print(p)
   
-  # Save the plot
-  ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+  return(p)
+
 }

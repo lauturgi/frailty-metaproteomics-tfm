@@ -44,7 +44,7 @@ create_maxlfq_boxplot <- function(se, col_data, group_col = "frailty",
     scale_fill_manual(values = fill_colors)
   
   # Return plots
-  return(list(maxlfq_summary = maxlfq_summary, plot_samples = plot_1, 
-              plot_groups = plot_2))
+  return(list(se_long = se_long, maxlfq_summary = maxlfq_summary,
+              plot_samples = plot_1, plot_groups = plot_2))
 }
 
