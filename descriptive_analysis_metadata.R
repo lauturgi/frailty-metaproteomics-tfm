@@ -1,6 +1,9 @@
 #install.packages("ggplot2")
 library(ggplot2)
 library(ComplexHeatmap)
+library(circlize)
+source("create_bar_plot.R")
+source("create_density_plot.R")
 
 # Working directory
 work_path <- "/home/lauturgi/workspace/tfm"
@@ -106,31 +109,85 @@ missing_cases[missing_columns] <- NA
 # Add the new rows
 metadata_ft <- rbind(metadata_ft, missing_cases)
 
+# Replicate column
+metadata_ft$replicate <- substr(metadata_ft$ID.FISABIO, 3, 5)
+
 # Save metadatos
-save_path <- paste0(work_path,"/data/metadatos.RData")
+save_path <- paste0(work_path,"/data/metadata.RData")
 save(metadata_ft, file = save_path)
 
-load(paste0(work_path, "/data/metadatos.RData"))
+# ==================================
+# Test correlation
+# ==================================
 
-# ==================================
-# Test continuos variables: FT vs NFT 
-# ==================================
-cor_matrix <- cor(metadata_ft[, c("w23age", "w23medas", "w23energy",
-                                  "w23weight", "w23height", "w23bmi",
-                                  "w23sppbscore")], 
-                  method = "spearman", use = "complete.obs")
-Heatmap(cor_matrix, 
-        name = "Spearman correlation", 
-        col = colorRampPalette(c("white", "blue", "red"))(100),
-        show_row_dend = FALSE, 
+#cor_matrix <- cor(metadata_ft[, c("w23age", "w23medas", "w23energy",
+#                                  "w23weight", "w23height", "w23bmi",
+#                                  "w23sppbscore")], 
+#                  method = "spearman", use = "complete.obs")
+#Heatmap(cor_matrix, 
+#        name = "Spearman correlation", 
+#        col = colorRampPalette(c("white", "blue", "red"))(100),
+#        show_row_dend = FALSE, 
+#        column_names_gp = gpar(fontsize = 6), 
+#        row_names_gp = gpar(fontsize = 6), 
+#        # cluster_columns = FALSE,
+#        # cluster_rows = FALSE,
+#        clustering_distance_rows = "euclidean", 
+#        clustering_distance_columns = "euclidean",
+#        use_raster = FALSE)
+
+colnames(metadata_ft)
+vars <- metadata_ft[, c("w23sex", "w23education", "w23tobacco", "w23alcohol", 
+                        "w23diabetes", "w23chronicrespdisease", "w23ami", 
+                        "w23stroke", "w23chf", "w23af", "w23osteoarthritis", 
+                        "w23reumatarthitis", "w23hipfracture", "w23depression",
+                        "w23cancer", "w23sarcopenia", "w23age", "w23medas", 
+                        "w23energy", "w23weight", "w23height", "w23bmi",
+                        "w23sppbscore", "w23frailty_fried_chs_2c", 
+                        "w23frailty_fried_chs_3c", "w23frailty_fried_mod_2c", 
+                        "w23frailty_fried_mod_3c")]
+
+vars[] <- lapply(vars, as.numeric)
+
+
+# Correlation and p-values matrix
+n <- ncol(vars)
+cor_matrix <- matrix(NA, n, n)
+p_matrix <- matrix(NA, n, n)
+colnames(cor_matrix) <- rownames(cor_matrix) <- colnames(vars)
+colnames(p_matrix) <- rownames(p_matrix) <- colnames(vars)
+
+# Test association between paired samples using Spearman correlation coefficient
+for (i in 1:n) {
+  for (j in 1:n) {
+    test <- cor.test(vars[[i]], vars[[j]], method = "spearman", exact = FALSE)
+    cor_matrix[i, j] <- test$estimate
+    p_matrix[i, j] <- test$p.value
+  }
+}
+
+# Create labels for p-values
+p_text <- ifelse(p_matrix < 0.001, "***",
+                 ifelse(p_matrix < 0.01, "**",
+                        ifelse(p_matrix < 0.05, "*", "")))
+
+# Plot heatmap
+Heatmap(cor_matrix,
+        name = "Spearman correlation",
+        col = colorRamp2(c(-1, 0, 1), c("blue", "white", "red")),
+        cell_fun = function(j, i, x, y, ...)
+          grid.text(p_text[i, j], x, y, gp = gpar(fontsize = 6))
+        ,
         column_names_gp = gpar(fontsize = 6), 
-        row_names_gp = gpar(fontsize = 6), 
-        # cluster_columns = FALSE,
-        # cluster_rows = FALSE,
-        clustering_distance_rows = "euclidean", 
+        row_names_gp = gpar(fontsize = 6),
+        show_row_dend = FALSE,
+        clustering_distance_rows = "euclidean",
         clustering_distance_columns = "euclidean",
         use_raster = FALSE)
 
+# ==================================
+# Test continuous variables 
+# ==================================
 # Age vs frailty
 ggplot(metadata_ft, aes(x = w23age, fill = Fragilidad)) +
   geom_density(alpha = 0.4) + 
@@ -145,7 +202,7 @@ check_normal_and_test(metadata_ft, "w23age", "Fragilidad")
 #W = 6477.5, p-value = 4.618e-08
 #alternative hypothesis: true location shift is not equal to 0
 
-# medas vs frailty
+# Medas vs frailty
 ggplot(metadata_ft, aes(x = w23medas, fill = Fragilidad)) +
   geom_density(alpha = 0.4) + 
   theme_minimal()
@@ -154,7 +211,7 @@ check_normal_and_test(metadata_ft, "w23medas", "Fragilidad")
 #W = 2677, p-value = 0.002641
 #alternative hypothesis: true location shift is not equal to 0
 
-# energy vs frailty
+# Energy vs frailty
 ggplot(metadata_ft, aes(x = w23energy, fill = Fragilidad)) +
   geom_density(alpha = 0.4) + 
   theme_minimal()
@@ -196,7 +253,7 @@ check_normal_and_test(metadata_ft, "w23bmi", "Fragilidad")
 #W = 5672.5, p-value = 0.0007527
 #alternative hypothesis: true location shift is not equal to 0
 
-#w23sppbscore vs frailty
+# w23sppbscore vs frailty
 ggplot(metadata_ft, aes(x = w23sppbscore, fill = Fragilidad)) +
   geom_density(alpha = 0.4) + 
   theme_minimal()
@@ -204,3 +261,67 @@ check_normal_and_test(metadata_ft, "w23sppbscore", "Fragilidad")
 #Wilcoxon rank sum test with continuity correction
 #W = 415.5, p-value < 2.2e-16
 #alternative hypothesis: true location shift is not equal to 0
+
+# ==================================
+# Test categorical variables 
+# ==================================
+# Contingency table: w23sex vs Fragilidad
+cont <- table(metadata_ft$w23sex, metadata_ft$Fragilidad)
+chisq.test(cont)
+#fisher.test(cont)
+
+# Contingency table: w23tobacco vs Fragilidad
+cont <- table(metadata_ft$w23tobacco, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23alcohol vs Fragilidad
+cont <- table(metadata_ft$w23alcohol, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23diabetes vs Fragilidad
+cont <- table(metadata_ft$w23diabetes, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23chronicrespdisease vs Fragilidad
+cont <- table(metadata_ft$w23chronicrespdisease, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23ami vs Fragilidad
+cont <- table(metadata_ft$w23ami, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23chf vs Fragilidad
+cont <- table(metadata_ft$w23chf, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23af vs Fragilidad
+cont <- table(metadata_ft$w23af, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23chf vs Fragilidad
+cont <- table(metadata_ft$w23chf, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23osteoarthritis vs Fragilidad
+cont <- table(metadata_ft$w23osteoarthritis, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23reumatarthitis vs Fragilidad
+cont <- table(metadata_ft$w23reumatarthitis, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23depression vs Fragilidad
+cont <- table(metadata_ft$w23depression, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23hipfracture vs Fragilidad
+cont <- table(metadata_ft$w23hipfracture, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23cancer vs Fragilidad
+cont <- table(metadata_ft$w23cancer, metadata_ft$Fragilidad)
+chisq.test(cont)
+
+# Contingency table: w23sarcopenia vs Fragilidad
+cont <- table(metadata_ft$w23sarcopenia, metadata_ft$Fragilidad)
+chisq.test(cont)

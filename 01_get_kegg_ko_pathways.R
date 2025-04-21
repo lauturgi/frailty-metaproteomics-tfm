@@ -95,6 +95,8 @@ kegg_ko_path <- rbind(kegg_ko_path, kegg_ko_brite)
 save_path <- paste0(work_path,"/data/kegg_ko_path.RData")
 save(kegg_ko_path, file = save_path)
 
+load(paste0(work_path,"/data/kegg_ko_path.RData"))
+
 # ==================================
 # KEGG pathways from FISABIO
 # ==================================

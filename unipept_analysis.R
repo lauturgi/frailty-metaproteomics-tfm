@@ -6,7 +6,10 @@ library(htmlwidgets)
 work_path <- "/home/lauturgi/workspace/tfm"
 
 # Unipept LCA analysis output directory
-unipept_path <- "/mnt/d/proteomica/fragilidad/datos/PeptideFilesUnipept/lca_output_no_dup/"
+unipept_path <- paste0("/mnt/d/proteomica/fragilidad/datos/",
+                       "PeptideFilesUnipept/lca_output_no_dup/")
+# Load metadata
+load(paste0(work_path, "/data/metadata.RData"))
 
 # Read Unipept LCA output files from frailty cohort
 nrow_samples <- c()  # Vector to store number of peptides of each sample
@@ -22,7 +25,7 @@ for (file in list.files(unipept_path)) {
     assign(df_name, df)
     # Save LCA output as RData
     save_path <- paste0(work_path,paste0("/data/",df_name,".RData"))
-    save(df, file = save_path)
+    save(list = df_name, file = save_path)
   }
 }
 
