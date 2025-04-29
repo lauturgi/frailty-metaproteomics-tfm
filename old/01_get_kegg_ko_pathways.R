@@ -118,10 +118,11 @@ head(kegg_ko_path_2)
 pepfunk_path <- "/mnt/d/proteomica/fragilidad/Pepfunk/database/"
 kegg_old <- read.csv2(paste0(pepfunk_path,"kegg_L3.txt"), sep = "\t", 
                       header = FALSE, colClasses = "character")
-colnames(kegg_old) <- c("KEGG", "KEGG_DESCRIPTION", "PATHWAYS",
-                        "PATHWAYS_DESCRIPTION")
+colnames(kegg_old) <- c("KEGG", "KEGG_DESCR", "PATHWAY",
+                        "PATHWAY_DESCR")
 
-kegg_check <- merge(kegg_ko_path_2, kegg_old, by.x = c("KEGG", "PATHWAYS"), 
-                    by.y = c("KEGG", "PATHWAYS"), all = TRUE)
+kegg_check <- merge(kegg_ko_path, kegg_old, by.x = c("KEGG", "PATHWAY"), 
+                    by.y = c("KEGG", "PATHWAY"), all = TRUE)
 
-kegg_check <- kegg_check[is.na(kegg_check$PATHWAYS_DESCRIPTION.x),]
+kegg_check <- kegg_check[is.na(kegg_check$PATHWAY_DESCR.x),]
+unique(kegg_check$PATHWAY)

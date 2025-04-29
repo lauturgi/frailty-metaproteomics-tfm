@@ -1,5 +1,5 @@
 # Load libraries
-library(FragPipeAnalystR)
+#library(FragPipeAnalystR)
 library(ggplot2)
 library(limma)
 library(vsn)
@@ -10,18 +10,19 @@ library(reshape2)
 library(ComplexHeatmap)
 library(UniprotR)
 library(impute)
+
+# Working directory
+work_path <- getwd()
+
 # Load functions
-source("create_bar_plot.R")
-source("create_density_plot.R")
-source("create_pca_plot.R")
-source("create_maxlfq_boxplot.R")
+source(paste0(work_path, "/functions/create_bar_plot.R"))
+source(paste0(work_path, "/functions/create_density_plot.R"))
+source(paste0(work_path, "/functions/create_pca_plot.R"))
+source(paste0(work_path, "/functions/create_maxlfq_boxplot.R"))
 
 # ==================================
 # 1. Making SummarizedExperiment
 # ==================================
-
-# Working directory
-work_path <- getwd()
 
 # Path to combined_protein.tsv and experiment_annotation.tsv
 fragpipe_path <- paste0("/mnt/d/proteomica/fragilidad/datos/ProteinIdent/",
@@ -110,13 +111,23 @@ class(se)
 
 # Check log2, exp, lfq_type and level
 metadata(se)
+# $log2transform
+# FALSE
+
+#$lfq_type
+# "MaxLFQ"
+
+#$level
+# "protein"
 
 # Check number of rows and columns
 dim(se)
+# 6854  274
 
 # Phenotypic variables
 colData(se)
 names(colData(se))
+# "file" "sample"      "sample_name" "condition"   "replicate"   "label"
 
 # Check if more than one sample per case
 table(colData(se)$sample_name)
@@ -132,7 +143,7 @@ head(colnames(se))
 # ==================================
 
 # Load metadatos
-load(paste0(work_path, "/data/metadatos.RData"))
+load(paste0(work_path, "/data/metadata.RData"))
 
 # Keep only data from FT cohort
 metadata_ft$replicate <- substring(metadata_ft$ID.FISABIO, 3, 5)
@@ -142,6 +153,7 @@ unique(colData(se)$replicate)
 
 # Check number of rows and columns
 dim(se)
+# 6854  203
 
 # ==================================
 # 3. Adding phenotypic data
@@ -150,61 +162,29 @@ dim(se)
 # Create an aligned dataframe with the order of `replicate` in colData(se)
 replicate_se <- colData(se)$replicate
 replicate_metadata <- metadata_ft$replicate
-
 metadata_ft <- metadata_ft[match(replicate_se, replicate_metadata), ]
 
 # Add phenotypic variables to colData
-colData(se)$frailty <- factor(metadata_ft$Fragilidad, levels = c("NFT", "FT"))
-colData(se)$sex <- metadata_ft$w23sex
-# Group alcohol consumption in 3 levels in 0: Rare | 1: Monthly | 2: Weekly
-# 1: A diario o casi a diario --> 2
-# 2: 5-6 días por semana --> 2
-# 3: 3-4 días por semana --> 2
-# 4: 1-2 días por semana --> 2
-# 5: 2-3 días en un mes --> 1
-# 6: 1 vez al mes --> 1
-# 7: Menos de una vez al mes --> 1
-# 8: No en los últimos 12 meses, he dejado de tomar alcohol --> 0
-# 9: Nunca o solamente unos sorbos para probar a lo largo de toda la vida --> 0
-colData(se)$alcohol <- factor(ifelse(metadata_ft$w23alcohol %in% 
-                                       c("1", "2", "3", "4"), "2",
-                              ifelse(metadata_ft$w23alcohol %in% 
-                                       c("5", "6", "7"), "1",
-                                     ifelse(metadata_ft$w23alcohol %in% 
-                                              c("8", "9"), "0", NA)
-                                     )
-                              ), levels = c("0", "1", "2"))
-
-colData(se)$tobacco <- metadata_ft$w23tobacco
-colData(se)$diabetes <- metadata_ft$w23diabetes
-colData(se)$chf <- metadata_ft$w23chf
-colData(se)$depression <- metadata_ft$w23depression
-colData(se)$osteoarthritis <- metadata_ft$w23osteoarthritis
-colData(se)$sarcopenia <- metadata_ft$w23sarcopenia
-
-colData(se)$bmi <- metadata_ft$w23bmi
-colData(se)$energy <- metadata_ft$w23energy
-
-# ILEF calculated from SPPB score
-colData(se)$ilef <- as.factor(ifelse(metadata_ft$w23sppbscore > 9, "0",
-                                     ifelse(metadata_ft$w23sppbscore <= 9, "1", 
-                                            NA)
-                                     )
-                              )
-
+colData(se)$frailty <- metadata_ft$frailty
+colData(se)$sex <- metadata_ft$sex
+colData(se)$education <- metadata_ft$education
+colData(se)$alcohol <- metadata_ft$alcohol
+colData(se)$tobacco <- metadata_ft$tobacco
+colData(se)$diabetes <- metadata_ft$diabetes
+colData(se)$chf <- metadata_ft$chf
+colData(se)$af <- metadata_ft$af
+colData(se)$hipfracture <- metadata_ft$hipfracture
+colData(se)$depression <- metadata_ft$depression
+colData(se)$osteoarthritis <- metadata_ft$osteoarthritis
+colData(se)$sarcopenia <- metadata_ft$sarcopenia
+colData(se)$ilef <- metadata_ft$ilef
+colData(se)$age <- metadata_ft$age
+colData(se)$medas <- metadata_ft$medas
+colData(se)$energy <- metadata_ft$energy
+colData(se)$bmi <- metadata_ft$bmi
 
 # Check
 head(colData(se))
-
-# Plot alcohol 3 levels
-p <- create_bar_plot(colData(se), "alcohol", title = "Bar plot for alcohol")
-save_path <- paste0(work_path,"/plots/metadata/bar_plot_alcohol_3.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
-
-# Plot ILEF 
-p <- create_bar_plot(colData(se), "ilef", title = "Bar plot for ILEF")
-save_path <- paste0(work_path,"/plots/metadata/bar_plot_ILEF.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
 
 # ==================================
 # 4. Filtering
@@ -307,16 +287,12 @@ ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
 
 # Make binary assay (1 = valid value, 0 = missing value)
 missval <- ifelse(is.na(se_assay), 0, 1)
-colnames(missval) <- substr(colnames(missval), 1, 7)
 
 # Convert matrix to long format dataframe
 df <- melt(missval)
 
 # Rename columns
 colnames(df) <- c("protein", "sample", "intensity")
-
-# Rename samples
-df$sample <- substr(df$sample, 1, 7)
 
 # Add frailty group
 df <- merge(df, col_data[, c("sample", "frailty")], by = "sample")
@@ -357,21 +333,20 @@ dev.off()
 column_ann <- HeatmapAnnotation(frailty = colData(se)$frailty,
                                 col = list(frailty = c("FT" = "red", 
                                                        "NFT" = "blue")))
-Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE, 
-        column_names_gp = gpar(fontsize = 4), show_row_names = FALSE, 
-        # cluster_columns = FALSE,
-        # cluster_rows = FALSE,
-        clustering_distance_rows = "binary", 
-        clustering_distance_columns = "binary",
-        top_annotation = column_ann, 
-        use_raster = FALSE)
+p <- Heatmap(missval, name = "NA", col = c("white", "black"), 
+             show_row_dend = FALSE, column_names_gp = gpar(fontsize = 4),
+             show_row_names = FALSE, 
+             #cluster_columns = FALSE, 
+             #cluster_rows = FALSE,
+             clustering_distance_rows = "binary", 
+             clustering_distance_columns = "binary",
+             top_annotation = column_ann,
+             use_raster = FALSE)
 
 save_path <- paste0(work_path,"/plots/preprocessing/heatmap_clust_na_ann.png")
 png(save_path, width = 8, height = 6, units = "in", res = 300)
 draw(p)
 dev.off()
-
-# Filter missing by sample proportion
 
 # Sample proportion for each protein
 presence_proportion <- rowSums(!is.na(se_assay)) / ncol(se_assay)
@@ -501,16 +476,12 @@ ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
 
 # Make binary assay (1 = valid value, 0 = missing value)
 missval <- ifelse(is.na(se_filt_miss_assay), 0, 1)
-colnames(missval) <- substr(colnames(missval), 1, 7)
 
 # Convert matrix to long format dataframe
 df <- melt(missval)
 
 # Rename columns
 colnames(df) <- c("protein", "sample", "intensity")
-
-# Rename samples
-df$sample <- substr(df$sample, 1, 7)
 
 # Add frailty group
 df <- merge(df, col_data[, c("sample", "frailty")], by = "sample")
@@ -570,24 +541,31 @@ dev.off()
 # 4.2. By organism
 # ==================================
 # Get lineage from UniProt
-lineage_df <- GetProteinAnnontate(rownames(se_filt_miss_assay),
+lineage <- GetProteinAnnontate(rownames(se_filt_miss_assay),
                                   columns = c("lineage"))
-lineage_df <- as.data.frame(lineage_df)
+lineage_df <- as.data.frame(lineage)
 lineage_df$protein_id <- rownames(se_filt_miss_assay)
 colnames(lineage_df)[colnames(lineage_df) == "lineage_df"] <- "lineage"
 # Get superkingdom from lineage
 lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","),
                                   function(x) x[2])
+lineage_df$genus <- ifelse(
+  grepl("Eukaryota", lineage_df$superkingdom),
+  sapply(strsplit(lineage_df$lineage, ","), function(x) tail(x, 1)),
+  NA
+)
+
 
 # Get protein_id from bacteria proteins
-proteins_to_keep <- lineage_df[grep("Bacteria", lineage_df$superkingdom), 
+proteins_to_keep <- lineage_df[grepl("Bacteria", lineage_df$superkingdom) |
+                                 grepl("Homo", lineage_df$genus), 
                                "protein_id"]
 # Filter SummarizedExperiment
 se_filt_bact <- se_filt_miss[proteins_to_keep, ]
 
 # Number of proteins after filtering no bacteria proteins
 nrow(se_filt_bact)
-# 163
+# 182
 
 se_filt_bact_assay <- assay(se_filt_bact)
 
@@ -596,17 +574,18 @@ se_filt_bact_assay <- assay(se_filt_bact)
 # ==================================
 # - Ribosome subunits
 # - Elongation factor Tu
-# - Chaperones?
-# - ?
+# - Keratin
 # ==================================
 se_filtered <- se_filt_bact[-grep("ribosomal", 
                                   rowData(se_filt_bact)$Description), ]
 se_filtered <- se_filtered[-grep("Elongation factor Tu", 
                                  rowData(se_filtered)$Description), ]
+se_filtered <- se_filtered[-grep("Keratin", 
+                                 rowData(se_filtered)$Description), ]
 se_filtered_assay <- assay(se_filtered)
 
 nrow(se_filtered_assay)
-# 82
+# 96
 
 # Save SummarizedExperiment filtered
 save_path <- paste0(work_path,"/data/se_filtered.RData")
@@ -624,7 +603,6 @@ se_filtered_df$protein_id <- rownames(se_filtered_df)
 rownames(se_filtered_df) <- NULL
 se_filtered_long <- melt(se_filtered_df)
 colnames(se_filtered_long) <- c("protein_id", "Samples", "MaxLFQ")
-se_filtered_long$Samples <- substr(se_filtered_long$Samples, 1, 7)
 
 # Add metadata
 se_filtered_long <- as.data.frame(merge(se_filtered_long, 
@@ -632,8 +610,8 @@ se_filtered_long <- as.data.frame(merge(se_filtered_long,
                                         by.x = "Samples", by.y = "sample"))
 
 summary(se_filtered_long$MaxLFQ)
-#Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-#6773   53102   81201  138750  140284 9382062    4941 
+# Min.  1st Qu.   Median     Mean  3rd Qu.     Max.     NA's 
+# 6773    54008    85770   192667   163397 79194328     5694   
 
 # Plot MaxLFQ vs samples
 p <- ggplot(se_filtered_long, aes(x = Samples, y = MaxLFQ, fill = frailty)) + 

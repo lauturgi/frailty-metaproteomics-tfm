@@ -8,7 +8,7 @@ create_bar_plot <- function(data, variable, title = "Bar Plot") {
     geom_bar() +
     labs(title = title, x = variable, y = "Count") +
     theme_minimal() +
-    geom_text(stat = "count", aes(label = ..count..),
+    geom_text(stat = "count", aes(label = after_stat(count)),
               vjust = -0.25)
   
   # Print the plot
