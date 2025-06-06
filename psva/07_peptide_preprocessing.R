@@ -23,7 +23,7 @@ peptides  <- read.delim(paste0(fragpipe_path,"combined_peptide.tsv"),
                         row.names = 1) %>%
   as.data.frame() %>% 
   select(ends_with("Intensity")) %>%
-  select(contains("MaxLFQ")) %>%  # MaxLFQ intensities
+  select(-contains("MaxLFQ")) %>%  # Unselect MaxLFQ
   select(contains(metadata_ft$replicate))
 
 # Number of peptides
@@ -35,8 +35,8 @@ sum(peptides != 0)
 # 312065
 
 # Change colnames to include the group each replicate belongs to
-replicates_ft <- metadata_ft[metadata_ft$Fragilidad == "FT", "replicate"]
-replicates_nft <- metadata_ft[metadata_ft$Fragilidad == "NFT", "replicate"]
+replicates_ft <- metadata_ft[metadata_ft$frailty == "FT", "replicate"]
+replicates_nft <- metadata_ft[metadata_ft$frailty == "NFT", "replicate"]
 for (i in seq_along(colnames(peptides))) {
   colname <- colnames(peptides)[i]  # Get column name
   
@@ -51,19 +51,18 @@ for (i in seq_along(colnames(peptides))) {
 peptides[peptides==0] <- NA
 peptides_to_keep <- apply(peptides, 1, function(x) !all(is.na(x)))
 sum(!peptides_to_keep)
-# 3517
+# 
 
 # Filter peptides with all NA
 peptides <- peptides[peptides_to_keep, ]
 
 # Number of peptides after filtering those with all NA
 nrow(peptides)
-# 25742
+# 
 
 # Number of intensities after filtering those with all NA
 table(!is.na(peptides))
-# TRUE    FALSE 
-# 312065 4913561 
+# 
 
 # Number of peptides detected per sample
 num_pep_sample <- apply(peptides, 2, function(x) sum(!is.na(x)))
@@ -76,8 +75,7 @@ num_pep_sample$Frailty <- sapply(strsplit(num_pep_sample$Sample, "_"), `[`, 1)
 
 # Summary total peptides detected per sample
 summary(num_pep_sample$Peptides)
-# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-# 64.0   934.5  1360.0  1537.3  1872.0  7152.0 
+# 
 
 # Density plot number of peptides per sample in FT vs NFT
 ggplot(num_pep_sample, aes(x = Peptides, fill = Frailty)) +
@@ -160,8 +158,8 @@ Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE,
 # ==================================
 # Filter by missing
 # ==================================
-# Fragilidad column as grouping
-cond_options <- table(metadata_ft[,"Fragilidad"]) %>% as.data.frame()
+# Frailty column as grouping
+cond_options <- table(metadata_ft[,"frailty"]) %>% as.data.frame()
 
 # Filtering by minimum count in at least 1 condition
 cond_opts <- cond_options$Var1
@@ -172,7 +170,7 @@ pep_exp <- filter_valids(peptides,
                          min_count = cond_count,
                          at_least_one = T)
 
-save(norm_pep_exp, file = paste0(work_path, "/data/pep_exp.RData"))
+save(pep_exp, file = paste0(work_path, "/psva/data/lfq/pep_exp.RData"))
 
 # Number of peptides after filtering by sample proportion
 nrow(pep_exp)
@@ -320,28 +318,20 @@ ggplot(pep_exp_long, aes(x = Intensities)) +
   xlim(0, 700000)
 
 # Estimate size factor for each sample -> norm_pep (vector)
-#norm_pep <- estimateSizeFactorsForMatrix(as.matrix(pep_exp)#,
+norm_pep <- estimateSizeFactorsForMatrix(as.matrix(pep_exp)#,
                                          #type = "poscounts"
-#                                         )
+                                        )
 # Normalise dividing each column by its size factor
-#norm_pep_exp <- sweep(as.matrix(pep_exp), 2, norm_pep, "/")
-#norm_pep_exp <- as.data.frame(norm_pep_exp)
+norm_pep_exp <- sweep(as.matrix(pep_exp), 2, norm_pep, "/")
+norm_pep_exp <- as.data.frame(norm_pep_exp)
 
-#save(norm_pep_exp, file = paste0(work_path, "/data/norm_pep_exp.RData"))
+save(norm_pep_exp, file = paste0(work_path, "/psva/data/lfq/norm_pep_exp.RData"))
 
-
-# Log2 transform
-#log_pep_exp <- norm_pep_exp
-#log_pep_exp[, grep("Intensity", names(norm_pep_exp))] <- lapply(
-#  norm_pep_exp[, grep("Intensity", names(norm_pep_exp))], 
-#  function(x) log2(1 + x)
-#)
 
 # Log2 transform
-log_pep_exp <- pep_exp
-log_pep_exp[is.na(log_pep_exp)] <- 0
-log_pep_exp[, grep("Intensity", names(pep_exp))] <- lapply(
-  pep_exp[, grep("Intensity", names(pep_exp))], 
+log_pep_exp <- norm_pep_exp
+log_pep_exp[, grep("Intensity", names(norm_pep_exp))] <- lapply(
+  norm_pep_exp[, grep("Intensity", names(norm_pep_exp))], 
   function(x) log2(1 + x)
 )
 

@@ -2,8 +2,6 @@
 library(KEGGREST)
 library(dplyr)
 
-#core_pep_kegg_db_old <- read.csv("/mnt/d/proteomica/fragilidad/Pepfunk/database/core_pep_kegg_db.csv")
-
 # ==================================
 # KO from KEGG IDs
 # ==================================
@@ -11,7 +9,7 @@ library(dplyr)
 work_path <- getwd()
 
 # Read unique KEGG
-kegg <- read.csv(paste0(work_path, "/unique_kegg.csv")) %>%
+kegg <- read.csv(paste0(work_path, "/psva/unique_kegg.csv")) %>%
   select(-X)
 
 # Get unique organisms
@@ -34,4 +32,4 @@ for (org in orgs) {
 # Combine all data.frames
 kegg_ko <- do.call(rbind, kegg_ko_list)
 
-save(kegg_ko, file = paste0(work_path, "/data/kegg_ko.RData"))
+save(kegg_ko, file = paste0(work_path, "/psva/data/kegg_ko.RData"))

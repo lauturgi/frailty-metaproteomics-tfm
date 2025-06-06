@@ -26,6 +26,7 @@ peptides  <- read.delim(paste0(fragpipe_path,"combined_peptide.tsv"),
   select(contains("MaxLFQ")) %>%  # MaxLFQ intensities
   select(contains(metadata_ft$replicate))
 
+
 # Change 0 values to NA
 peptides[peptides==0] <- NA
 
@@ -38,8 +39,8 @@ sum(!is.na(peptides))
 # 305082
 
 # Change colnames to include the group each replicate belongs to
-replicates_ft <- metadata_ft[metadata_ft$Fragilidad == "FT", "replicate"]
-replicates_nft <- metadata_ft[metadata_ft$Fragilidad == "NFT", "replicate"]
+replicates_ft <- metadata_ft[metadata_ft$frailty == "FT", "replicate"]
+replicates_nft <- metadata_ft[metadata_ft$frailty == "NFT", "replicate"]
 for (i in seq_along(colnames(peptides))) {
   colname <- colnames(peptides)[i]  # Get column name
   
@@ -163,7 +164,7 @@ Heatmap(missval, name = "NA", col = c("white", "black"), show_row_dend = FALSE,
 # Filter by missing
 # ==================================
 # Fragilidad column as grouping
-cond_options <- table(metadata_ft[,"Fragilidad"]) %>% as.data.frame()
+cond_options <- table(metadata_ft[,"frailty"]) %>% as.data.frame()
 
 # Filtering by minimum count in at least 1 condition
 cond_opts <- cond_options$Var1
@@ -173,10 +174,11 @@ pep_exp <- filter_valids(peptides,
                          conditions = cond_opts,
                          min_count = cond_count,
                          at_least_one = T)
-pep_exp[pep_exp==0] <- NA
-save(pep_exp, file = paste0(work_path, "/data/pep_exp.RData"))
+
+save(pep_exp, file = paste0(work_path, "/psva/data/maxlfq/pep_exp.RData"))
 
 # Number of peptides after filtering by sample proportion
+pep_exp[pep_exp==0] <- NA
 nrow(pep_exp)
 # 699
 

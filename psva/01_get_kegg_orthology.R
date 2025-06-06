@@ -40,7 +40,7 @@ for (line in lines) {
   }
 }
 
-save(ko_df, file = paste0(work_path, "/data/kegg_ko_l3_4.RData"))
+save(ko_df, file = paste0(work_path, "/psva/data/kegg_ko_l3_4.RData"))
 
 # Compare with kegg_L3.txt (old) from pepfunk
 pepfunk_path <- "/mnt/d/proteomica/fragilidad/Pepfunk/database/"
@@ -70,7 +70,7 @@ unique(kegg_check$L3)
 # "99983" "04040" "04052"
 
 # Compare with ko group by pathways and bride from KEGGREST
-load(paste0(work_path, "/data/kegg_ko_path_old.RData"))
+load(paste0(work_path, "/psva/data/kegg_ko_path_old.RData"))
 
 kegg_check_2 <- merge(ko_df, kegg_ko_path, by.x = c("L4", "L3"), 
                     by.y = c("KEGG", "PATHWAY"), all = TRUE)

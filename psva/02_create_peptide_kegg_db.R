@@ -14,7 +14,7 @@ library(stringr)
 work_path <- getwd()
 
 # Load KEGG_UniRef90.idmapping.dat
-UR2KEGG <- fread(file.path(work_path, "/KEGG_UniRef90.idmapping.dat"),
+UR2KEGG <- fread(file.path(work_path, "/psva/KEGG_UniRef90.idmapping.dat"),
                         header = FALSE) %>%
   rename(ID = V1, AnType = V2, AnID = V3) %>%
   pivot_wider(names_from = AnType, values_from = AnID, values_fn = list) %>%
@@ -32,37 +32,48 @@ nrow(UR2KEGG)
 # 24617890
 
 # Read uhgp_pep
-#Pep2Prot <- fread(file.path(work_path, "/uhgp_pep.tsv"), header = FALSE) %>%
+#Pep2Prot <- fread(file.path(work_path, "/psva/uhgp_pep.tsv"), header = FALSE) %>%
 #  rename(Peptide = V1, Protein = V2)
 #nrow(Pep2Prot)
 # 1027319075
 
 # Read uhgp_pep fractions
-Pep2Protaa <- fread(file.path(work_path, "uhgp_pepaa"), header = FALSE) %>%
+Pep2Protaa <- fread(file.path(work_path, "/psva/uhgp_pepaa"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protab <- fread(file.path(work_path, "uhgp_pepab"), header = FALSE) %>%
+Pep2Protab <- fread(file.path(work_path, "/psva/uhgp_pepab"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protac <- fread(file.path(work_path, "uhgp_pepac"), header = FALSE) %>%
+Pep2Protac <- fread(file.path(work_path, "/psva/uhgp_pepac"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protad <- fread(file.path(work_path, "uhgp_pepad"), header = FALSE) %>%
+Pep2Protad <- fread(file.path(work_path, "/psva/uhgp_pepad"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protae <- fread(file.path(work_path, "uhgp_pepae"), header = FALSE) %>%
+Pep2Protae <- fread(file.path(work_path, "/psva/uhgp_pepae"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protaf <- fread(file.path(work_path, "uhgp_pepaf"), header = FALSE) %>%
+Pep2Protaf <- fread(file.path(work_path, "/psva/uhgp_pepaf"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protag <- fread(file.path(work_path, "uhgp_pepag"), header = FALSE) %>%
+Pep2Protag <- fread(file.path(work_path, "/psva/uhgp_pepag"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protah <- fread(file.path(work_path, "uhgp_pepah"), header = FALSE) %>%
+Pep2Protah <- fread(file.path(work_path, "/psva/uhgp_pepah"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protai <- fread(file.path(work_path, "uhgp_pepai"), header = FALSE) %>%
+Pep2Protai <- fread(file.path(work_path, "/psva/uhgp_pepai"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protaj <- fread(file.path(work_path, "uhgp_pepaj"), header = FALSE) %>%
+Pep2Protaj <- fread(file.path(work_path, "/psva/uhgp_pepaj"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
-Pep2Protak <- fread(file.path(work_path, "uhgp_pepak"), header = FALSE) %>%
+Pep2Protak <- fread(file.path(work_path, "/psva/uhgp_pepak"),
+                    header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
 
 # Read diamond_uhgp_out
-Prot2UR <- fread(file.path(work_path, "/diamond_uhgp_best_hits_out.tsv"),
+Prot2UR <- fread(file.path(work_path, "/psva/diamond_uhgp_best_hits_out.tsv"),
                       header = FALSE) %>%
   select(1, 3) %>%
   rename(Protein = V1, ID = V3)
@@ -162,6 +173,11 @@ Pep2Prot2UR2KEGG <- bind_rows(Pep2Prot2UR2KEGGaa, Pep2Prot2UR2KEGGab,
                               Pep2Prot2UR2KEGGak)
 
 Pep2Prot2UR2KEGG <- select(Pep2Prot2UR2KEGG, -ID) #get rid of ID column
+nrow(Pep2Prot2UR2KEGG)
+# 73998315
+
+nrow(unique(Pep2Prot2UR2KEGG$Protein))
+# 902412
 
 # Save peptide-protein-UniRef90-KEGG dataset as csv file
-write.csv(Pep2Prot2UR2KEGG, file = paste0(work_path, "/core_pep_kegg_db.csv"))
+write.csv(Pep2Prot2UR2KEGG, file = paste0(work_path, "/psva/core_pep_kegg_db.csv"))

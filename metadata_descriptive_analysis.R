@@ -13,12 +13,9 @@ source(paste0(work_path, "/functions/create_bar_plot.R"))
 source(paste0(work_path, "/functions/create_density_plot.R"))
 source(paste0(work_path, "/functions/check_normal_and_test.R"))
 
-# Metadata directory
-metadata_path <- "/mnt/d/proteomica/fragilidad/datos/"
-metadata_name <- "Tabla metadatos ENRICA.csv"
-
 # Read metadata
-metadata <- read.csv(paste0(metadata_path,metadata_name),sep=";")
+metadata <- read.csv(paste0(work_path, "/data/Tabla metadatos ENRICA.csv"),
+                     sep=";")
 
 # Get frailty cohort cases and columns of interest
 metadata_ft <- metadata[metadata$Fragilidad %in% c("FT", "NFT"),

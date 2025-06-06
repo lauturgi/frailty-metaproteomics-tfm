@@ -10,7 +10,7 @@ work_path <- getwd()
 #uhgp_path <- "/mnt/d/proteomica/fragilidad/Pepfunk/database/uhgp-90"
 
 # Read UHGP annotation file
-uhgp_ann <- fread(file.path(paste0(work_path, "/uhgp-90_eggNOG.tsv")),
+uhgp_ann <- fread(file.path(paste0(work_path, "/psva/uhgp-90_eggNOG.tsv")),
                   sep = "\t", header = TRUE) %>%
   select(1, 12) %>%
   filter(KEGG_ko != "-")  # Filter UHGP proteins without KEGG KO
@@ -25,13 +25,13 @@ nrow(uhgp_ann)
 # 5379202
 
 # Read uhgp_pep
-Pep2Prot <- fread(file.path(work_path, "uhgp_pep.tsv"), header = FALSE) %>%
+Pep2Prot <- fread(file.path(work_path, "/psva/uhgp_pep.tsv"), header = FALSE) %>%
   rename(Peptide = V1, Protein = V2)
 nrow(Pep2Prot)
 # 1027319075
 
 # Read diamond_uhgp_out
-Prot2UR <- fread(file.path(work_path, "/diamond_uhgp_best_hits_out.tsv"),
+Prot2UR <- fread(file.path(work_path, "/psva/diamond_uhgp_best_hits_out.tsv"),
                  header = FALSE) %>%
   select(1, 3) %>%
   rename(Protein = V1, ID = V3)
@@ -87,5 +87,6 @@ nrow(unique(Pep2Prot2UR2KEGG[, "Protein"]))
 # 4850365
 
 # Save peptide-protein-UniRef90-KEGG dataset as csv file
-write.csv(Pep2Prot2UR2KEGG, file = paste0(work_path, "/core_pep_kegg_db_2.csv"))
+write.csv(Pep2Prot2UR2KEGG, file = paste0(work_path,
+                                          "/psva/core_pep_kegg_db_2.csv"))
 print("core_pep_kegg_db_2.csv saved.")
