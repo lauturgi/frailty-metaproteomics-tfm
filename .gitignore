@@ -4,3 +4,6 @@
 .Ruserdata
 *.dmnd
 *.dat
+*.png
+*.html
+*plots*

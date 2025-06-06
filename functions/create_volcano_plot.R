@@ -18,7 +18,10 @@ create_volcano_plot <- function(diff, sig = 0.05, fold = 0.7,
   # Generate the plot
   g <- ggplot(data = diff, aes(x = logFC, y = -log10(adj.P.Val), colour = diff.exp)) +
     geom_point(alpha = 0.8, size = 0.8) +
-    xlim(c(-8, 8)) + ylim(c(0, max(-log10(diff$adj.P.Val), na.rm = TRUE) + 1)) +
+    coord_cartesian(
+      xlim = c(-1, 1) * (max(abs(diff$logFC), na.rm = TRUE) + 1),
+      ylim = c(0, max(-log10(diff$adj.P.Val), na.rm = TRUE) + 0.5)
+    ) +
     xlab("log2 fold change") +
     ylab("-log10 adjusted p-value") +
     labs(title = title) +
