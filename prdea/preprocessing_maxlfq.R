@@ -3,10 +3,8 @@ library(FragPipeAnalystR)
 library(ggplot2)
 library(limma)
 library(vsn)
-#library(nortest)
 library(dplyr)
 library(SummarizedExperiment)
-#library(reshape2)
 library(ComplexHeatmap)
 library(UniprotR)
 library(impute)
@@ -25,11 +23,8 @@ source(paste0(work_path, "/functions/create_lfq_boxplot.R"))
 # ==================================
 
 # Path to combined_protein.tsv and experiment_annotation.tsv
-fragpipe_path <- paste0("/mnt/d/proteomica/fragilidad/datos/ProteinIdent/",
-                        "MSfraggerSPbacteria/DatosProtIdentCombinados/")
-
-combined_protein <- paste0(fragpipe_path, "combined_protein.tsv")
-experiment_ann <- paste0(fragpipe_path, "experiment_annotation.tsv")
+combined_protein <- paste0(work_path, "/prdea/data/combined_protein.tsv")
+experiment_ann <- paste0(work_path, "/prdea/data/experiment_annotation.tsv")
 
 # Read quant table
 prot_quant <- read.table(combined_protein,
@@ -198,14 +193,21 @@ nrow(se_assay)
 # 6854
 
 # Number of NA values in assay
-table(is.na(se_assay))
+na_table <- table(is.na(se_assay))
+na_table
 # FALSE    TRUE 
 # 61378 1329984
-1329984/(1329984+61378)
+
+prop_na <- na_table["TRUE"] / sum(na_table)
+prop_na
 # 0.9558864
 
-# Number of proteins with all NA
+# Proteins with at least one intensity value
 proteins_to_keep <- apply(se_assay, 1, function(x) !all(is.na(x)))
+# Number of proteins to keep
+sum(proteins_to_keep)
+# 2902
+# Number of proteins with all NA
 sum(!proteins_to_keep)
 # 3952 
 
@@ -220,15 +222,18 @@ save(se, file = save_path)
 # Get colData from SummarizedExperiment
 col_data <- as.data.frame(colData(se))
 
-# Number of proteins after filtering those with all NA
+# Check number of proteins after filtering those with all NA
 nrow(se_assay)
 # 2902
 
 # Number of NA values in assay after filtering those with all NA
-table(is.na(se_assay))
+na_table <- table(is.na(se_assay))
+na_table
 # FALSE   TRUE 
 # 61378 527728
-527728/(527728+61378)
+
+prop_na <- na_table["TRUE"] / sum(na_table)
+prop_na
 # 0.8958116
 
 # Number of proteins detected per sample
@@ -256,36 +261,38 @@ rownames(se_assay[!is.na(se_assay[,"YDD_248"]), ])
 
 # Density plot number of proteins per sample in FT vs NFT
 p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
-  geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of proteins per sample", x = "Number of proteins", 
+  geom_density(linewidth = 0.4, alpha = 0.3) +
+  labs(title = "Distribution of Proteins per Sample",
+       x = "Number of Proteins", 
        y = "Density") +
-  scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
-  theme_minimal()
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "blue"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail")) +
+  theme_minimal(base_size = 12)+
+  theme(
+    legend.position = "top",
+    legend.title = element_blank()
+  )
 
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
-                    "density_plot_num_prot_sample.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+# Mean number of proteins in frail
+mean(num_prot_sample[num_prot_sample$frailty == "FT", "Proteins"])
+# 275.9692
+# Standard deviation number of proteins in frail
+sd(num_prot_sample[num_prot_sample$frailty == "FT", "Proteins"])
+# 176.3123
 
-# Number of missing per sample
-num_na_sample <- apply(se_assay, 2, function(x) sum(is.na(x)))
-num_na_sample <- as.data.frame(num_na_sample)
-colnames(num_na_sample) <- "NAs"
-num_na_sample$Sample <- substr(rownames(num_na_sample), 1, 7)
-rownames(num_na_sample) <- NULL
-# Add frailty group
-num_na_sample <- merge(num_na_sample, col_data[, c("sample", "frailty")], 
-                       by.x = "Sample", by.y = "sample")
+# Mean number of proteins in non-frail
+mean(num_prot_sample[num_prot_sample$frailty == "NFT", "Proteins"])
+# 314.7826
+# Standard deviation number of proteins in non-frail
+sd(num_prot_sample[num_prot_sample$frailty == "NFT", "Proteins"])
+# 188.8102
 
-# Density plot number of missing per sample in FT vs NFT
-p <- ggplot(num_na_sample, aes(x = NAs, fill = frailty)) +
-  geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of NAs per sample", x = "Number of NAs", y = "Density") +
-  scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
-  theme_minimal()
-
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/", 
-                    "density_plot_num_na_sample.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+# Wilcox test number of proteins FT vs NFT
+wilcox.test(Proteins ~ frailty, data = num_prot_sample)
+# Wilcoxon rank sum test with continuity correction
+# data:  Proteins by frailty
+# W = 5127, p-value = 0.1004
+# alternative hypothesis: true location shift is not equal to 0
 
 # Make binary assay (1 = valid value, 0 = missing value)
 missval <- ifelse(is.na(se_assay), 0, 1)
@@ -334,37 +341,60 @@ draw(p)
 dev.off()
 
 # Annotation of columns by frailty group
-column_ann <- HeatmapAnnotation(frailty = colData(se)$frailty,
-                                col = list(frailty = c("FT" = "red", 
-                                                       "NFT" = "blue")))
-p <- Heatmap(missval, name = "NA", col = c("white", "black"), 
+column_ann <- HeatmapAnnotation(
+  frailty = colData(se)$frailty,
+  col = list(frailty = c("FT" = "red", "NFT" = "blue")),
+  show_annotation_name = FALSE,
+  show_legend = FALSE
+)
+
+p <- Heatmap(missval, col = c("white", "black"),
              show_row_dend = FALSE, column_names_gp = gpar(fontsize = 4),
              show_row_names = FALSE, 
+             show_column_names = FALSE,
              #cluster_columns = FALSE, 
              #cluster_rows = FALSE,
              clustering_distance_rows = "binary", 
              clustering_distance_columns = "binary",
              top_annotation = column_ann,
-             use_raster = FALSE)
+             use_raster = FALSE,
+             show_heatmap_legend = FALSE
+)
+# Heatmap legend
+legend_1 <- Legend(at = c(0, 1),
+                   labels = c("Missing value", "Valid value"),
+                   legend_gp = gpar(fill = c("white", "black")),
+                   title = NULL)
+# Annotation legend
+legend_2 <- Legend(at = c("FT", "NFT"),
+                   labels = c("Frail", "Non-Frail"),
+                   legend_gp = gpar(fill = c("red", "blue")),
+                   title = NULL)
 
+# Combine legends
+legends <- packLegend(legend_2, legend_1, direction = "horizontal")
+
+# Plot heatmap
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "heatmap_clust_na_ann.png")
 png(save_path, width = 8, height = 6, units = "in", res = 300)
-draw(p)
+draw(p, heatmap_legend_list = legends, heatmap_legend_side = "top")
 dev.off()
 
 # Sample proportion for each protein
-presence_proportion <- rowSums(!is.na(se_assay)) / ncol(se_assay)
-sample_percent <- presence_proportion * 100
-sample_percent <- data.frame(SamplePercentage = sample_percent)
-p <- create_density_plot(sample_percent, "SamplePercentage")
+sample_proportion <- rowSums(!is.na(se_assay)) / ncol(se_assay)
+sample_perce <- sample_proportion * 100
+sample_perce <- data.frame(percentage = sample_perce)
+p <- create_density_plot(sample_perce, "percentage",
+                         "Sample proportion (%) per protein", 
+                         "Distribution of protein detection across samples")
 
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
-                    "density_plot_SamplePercentage.png")
+                    "density_plot_sample_proportion.png")
 ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
 
 # Number of proteins present in more than 25%
-sum(presence_proportion > 0.25)
+sum(sample_proportion > 0.25)
 # 320
 
 # Number of proteins present in more than 50%
@@ -381,10 +411,9 @@ sum(presence_proportion == 1)
 
 # Proteins present in 100% of samples
 rownames(se_assay[presence_proportion == 1,])
-# P00761 --> trypsin
-# P04264 --> Keratin, type II cytoskeletal 1
-# P06702 --> Protein S100-A9: regulation of inflammatory processes and
-# immune response
+# P00761; trypsin
+# P04264; Keratin, type II cytoskeletal 1
+# P06702; Protein S100-A9: regulation of inflammatory processes and immune response
 
 # Proteins in more than 75% of samples
 rownames(se_assay[presence_proportion >= 0.75,])
@@ -409,16 +438,48 @@ sum(proteins_to_keep)
 # Filter SummarizedExperiment
 se_filt_miss <- se[proteins_to_keep, ]
 
-# Get protein intensities matrix from filtered SummarizedExperiment
-se_filt_miss_assay <- assay(se_filt_miss)
-
-# Number of proteins after filtering those present in <50% of samples in both
-# conditions
-nrow(se_filt_miss_assay)
+# Check number of proteins after filtering by sample proportion
+nrow(se_filt_miss)
 # 185
 
+# ==================================
+# 4.2. By organism
+# ==================================
+# Get lineage from UniProt
+lineage <- GetProteinAnnontate(rownames(se_filt_miss_assay),
+                               columns = c("lineage"))
+lineage_df <- as.data.frame(lineage)
+lineage_df$protein_id <- rownames(se_filt_miss_assay)
+colnames(lineage_df)[colnames(lineage_df) == "lineage_df"] <- "lineage"
+# Get superkingdom from lineage
+lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","),
+                                  function(x) x[2])
+lineage_df$genus <- ifelse(
+  grepl("Eukaryota", lineage_df$superkingdom),
+  sapply(strsplit(lineage_df$lineage, ","), function(x) tail(x, 1)),
+  NA
+)
+
+# Get protein_id from bacteria proteins
+proteins_to_keep <- lineage_df[grepl("Bacteria", lineage_df$superkingdom) |
+                                 grepl("Homo", lineage_df$genus), "protein_id"]
+
+# Filter SummarizedExperiment
+se_filtered <- se_filt_miss[proteins_to_keep, ]
+
+# Get protein intensities matrix
+se_filtered_assay <- assay(se_filtered)
+
+# Check number of proteins after filtering no bacteria or human proteins
+nrow(se_filtered_assay)
+# 182
+
+# Save SummarizedExperiment filtered
+save_path <- paste0(work_path,"/prdea/data/maxlfq/se_filtered.RData")
+save(se_filtered, file = save_path)
+
 # Number of proteins detected per sample
-num_prot_sample <- apply(se_filt_miss_assay, 2, function(x) sum(!is.na(x)))
+num_prot_sample <- apply(se_filtered_assay, 2, function(x) sum(!is.na(x)))
 num_prot_sample <- as.data.frame(num_prot_sample)
 colnames(num_prot_sample) <- "Proteins"
 num_prot_sample$Sample <- substr(rownames(num_prot_sample), 1, 7)
@@ -450,33 +511,12 @@ save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/density_plot_"
 ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
 
 # Number of NA values in assay
-table(is.na(se_filt_miss_assay))
+table(is.na(se_filtered_assay))
 # FALSE  TRUE 
 # 25894 11661 
 
-# Number of missing per sample
-num_na_sample <- apply(se_filt_miss_assay, 2, function(x) sum(is.na(x)))
-num_na_sample <- as.data.frame(num_na_sample)
-colnames(num_na_sample) <- "NAs"
-num_na_sample$Sample <- substr(rownames(num_na_sample), 1, 7)
-rownames(num_na_sample) <- NULL
-# Add frailty group
-num_na_sample <- merge(num_na_sample, col_data[, c("sample", "frailty")], 
-                       by.x = "Sample", by.y = "sample")
-
-# Density plot number of missing per sample in FT vs NFT
-p <- ggplot(num_na_sample, aes(x = NAs, fill = frailty)) +
-  geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of NAs per sample", x = "Number of NAs", y = "Density") +
-  scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
-  theme_minimal()
-
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
-                    "density_plot_num_na_sample_filt_min_fract.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
-
 # Make binary assay (1 = valid value, 0 = missing value)
-missval <- ifelse(is.na(se_filt_miss_assay), 0, 1)
+missval <- ifelse(is.na(se_filtered_assay), 0, 1)
 
 # Convert matrix to long format dataframe
 df <- melt(missval)
@@ -537,75 +577,6 @@ save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/heatmap_clust_"
 png(save_path, width = 8, height = 6, units = "in", res = 300)
 draw(p)
 dev.off()
-
-# ==================================
-# 4.2. By organism
-# ==================================
-# Get lineage from UniProt
-lineage <- GetProteinAnnontate(rownames(se_filt_miss_assay),
-                                  columns = c("lineage"))
-lineage_df <- as.data.frame(lineage)
-lineage_df$protein_id <- rownames(se_filt_miss_assay)
-colnames(lineage_df)[colnames(lineage_df) == "lineage_df"] <- "lineage"
-# Get superkingdom from lineage
-lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","),
-                                  function(x) x[2])
-lineage_df$genus <- ifelse(
-  grepl("Eukaryota", lineage_df$superkingdom),
-  sapply(strsplit(lineage_df$lineage, ","), function(x) tail(x, 1)),
-  NA
-)
-
-
-# Get protein_id from bacteria proteins
-proteins_to_keep <- lineage_df[grepl("Bacteria", lineage_df$superkingdom) |
-                                 grepl("Homo", lineage_df$genus), 
-                               "protein_id"]
-# Filter SummarizedExperiment
-se_filt_org <- se_filt_miss[proteins_to_keep, ]
-
-# Number of proteins after filtering no bacteria proteins
-nrow(se_filt_org)
-# 182
-
-se_filt_org_assay <- assay(se_filt_org)
-
-# ==================================
-# 4.3. (NO) By abundance
-# ==================================
-# - Ribosome subunits
-# - Elongation factor Tu
-# - Keratin
-# ==================================
-ribosub <- rowData(se_filt_org)[grep("ribosomal",
-                                      rowData(se_filt_org)$Description),
-                                 c("Protein ID", "Organism", "Description")]
-ribosub <- as.data.frame(ribosub)
-eftu <- rowData(se_filt_org)[grep("Elongation factor Tu",
-                                   rowData(se_filt_org)$Description),
-                              c("Protein ID", "Organism", "Description")]
-eftu <- as.data.frame(eftu)
-keratin <- rowData(se_filt_org)[grep("Keratin",
-                                      rowData(se_filt_org)$Description),
-                                 c("Protein ID", "Organism", "Description")]
-keratin <- as.data.frame(keratin)
-
-#se_filtered <- se_filt_bact[-grep("ribosomal", 
-#                                  rowData(se_filt_bact)$Description), ]
-#se_filtered <- se_filtered[-grep("Elongation factor Tu", 
-#                                 rowData(se_filtered)$Description), ]
-#se_filtered <- se_filtered[-grep("Keratin", 
-#                                 rowData(se_filtered)$Description), ]
-
-se_filtered <- se_filt_org
-se_filtered_assay <- se_filt_org_assay
-
-nrow(se_filtered_assay)
-# 182
-
-# Save SummarizedExperiment filtered
-save_path <- paste0(work_path,"/prdea/data/maxlfq/se_filtered.RData")
-save(se_filtered, file = save_path)
 
 # Boxplot maxlfq after filtering
 #res <- create_lfq_boxplot(se_filtered, col_data)
@@ -668,19 +639,6 @@ save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "density_plot_maxlfq.png")
 ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
 
-# Get proteins with intensities higher than percentile 95%
-#Q95 <- quantile(se_filtered_long$MaxLFQ, 0.95, na.rm = TRUE)
-#se_filtered_long_q95 <- se_filtered_long[se_filtered_long$MaxLFQ > Q95, ]
-#se_filtered_long_q95 <- se_filtered_long_q95[!is.na(se_filtered_long_q95), ]
-#prot_q95 <-  se_filtered_long_q95 %>% arrange(desc(MaxLFQ))
-#prot_q95 <- unique(prot_q95$protein_id)
-#prot_q95_ann <- GetProteinAnnontate(prot_q95,columns = c("gene_primary",
-#                                                         "organism_name",
-#                                                          "protein_name",
-#                                                          "cc_function"))
-#write.csv2(prot_q95_ann, "prot_q95_ann.csv")
-
-
 # Intensities density plot per sample
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "densities_plot_maxlfq.png")
@@ -702,8 +660,6 @@ save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
 png(save_path, width = 8, height = 6, units = "in", res = 300)
 meanSdPlot(se_filtered_assay)
 dev.off()
-
-#plotMA(se_filtered_assay)
 
 # Q-Q sample quantiles vs theoretical quantiles for a normal distribution
 for (i in 1:ncol(se_filtered_assay)) {
