@@ -29,7 +29,7 @@ params <- gsvaParam(
   kegg_pepsets,
   minSize = 10,
   kcdf = "Gaussian", 
-  use = "na.rm"
+  use = "na.rm"  # NA values data will be removed from calculations
 )
 
 # Calculate GSVA enrichment scores
