@@ -1,8 +1,10 @@
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(ggrepel)
+
+# Define PCA plot function
 create_pca_plot <- function(se_perseus, n_top_loadings = 5) {
-  # Load necessary libraries
-  library(ggplot2)
-  library(dplyr)
-  library(ggrepel)
   
   # Perform PCA
   pca_result <- prcomp(t(assay(se_perseus)), scale. = TRUE)
@@ -31,9 +33,8 @@ create_pca_plot <- function(se_perseus, n_top_loadings = 5) {
     labs(x = paste0("PC1 (", round(summary(pca_result)$importance[2, 1] * 100, 2), "%)"),
          y = paste0("PC2 (", round(summary(pca_result)$importance[2, 2] * 100, 2), "%)"),
          title = paste0("PCA with Top ", n_top_loadings, " Contributing Loadings")) +
-    theme_minimal()
+    theme_minimal(base_size = 12)
   
   # Return the plot
   return(p)
 }
-

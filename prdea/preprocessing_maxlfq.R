@@ -92,7 +92,7 @@ prot_maxlfq <- prot_maxlfq[, !is.na(colnames(prot_maxlfq))][rownames(exp_anno)]
 row_data <- prot_uniq[, -lfq_col]
 rownames(row_data) <- prot_uniq$ID
 
-# Make SummarizedExperiment
+# Make SummarizedExperiment (SE)
 se <- SummarizedExperiment(
   assays = as.matrix(prot_maxlfq),
   colData = exp_anno,
@@ -185,7 +185,7 @@ head(colData(se))
 # 4.1. By Missing
 # ==================================
 
-# Get intensities matrix from SummarizedExperiment
+# Get intensities matrix from SE
 se_assay <- assay(se)
 
 # Number of proteins
@@ -217,11 +217,11 @@ sum(!proteins_to_keep)
 se <- se[proteins_to_keep,]
 se_assay <- se_assay[proteins_to_keep, ]
 
-# Save SummarizedExperiment
+# Save SE
 save_path <- paste0(work_path,"/prdea/data/maxlfq/se.RData")
 save(se, file = save_path)
 
-# Get colData from SummarizedExperiment
+# Get colData from SE
 col_data <- as.data.frame(colData(se))
 
 # Check number of proteins after filtering those with all NA
@@ -242,12 +242,12 @@ prop_na
 # Number of proteins detected per sample
 num_prot_sample <- apply(se_assay, 2, function(x) sum(!is.na(x)))
 num_prot_sample <- as.data.frame(num_prot_sample)
-colnames(num_prot_sample) <- "Proteins"
-num_prot_sample$Sample <- substr(rownames(num_prot_sample), 1, 7)
+colnames(num_prot_sample) <- "proteins"
+num_prot_sample$sample <- rownames(num_prot_sample)
 rownames(num_prot_sample) <- NULL
 # Add frailty group
 num_prot_sample <- merge(num_prot_sample, col_data[, c("sample", "frailty")], 
-                         by.x = "Sample", by.y = "sample")
+                         by = "sample")
 
 # Summary total proteins detected per sample
 summary(num_prot_sample)
@@ -263,14 +263,15 @@ summary(num_prot_sample)
 rownames(se_assay[!is.na(se_assay[,"YDD_248"]), ])
 
 # Density plot number of proteins per sample in FT vs NFT
-p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
+p <- ggplot(num_prot_sample, aes(x = proteins, fill = frailty)) +
   geom_density(linewidth = 0.4, alpha = 0.3) +
   labs(title = "Distribution of proteins per sample",
        x = "Number of proteins", 
        y = "Density") +
   scale_fill_manual(values = c("FT" = "red", "NFT" = "blue"),
                     labels = c("FT" = "Frail", "NFT" = "Non-Frail")) +
-  theme_minimal(base_size = 12)+
+  theme_minimal(base_size = 12) +
+  coord_cartesian(ylim = c(0, 0.003)) +
   theme(
     legend.position = "top",
     legend.title = element_blank()
@@ -278,24 +279,24 @@ p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "density_plot_num_prot_sample.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Mean number of proteins in frail
-mean(num_prot_sample[num_prot_sample$frailty == "FT", "Proteins"])
+mean(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
 # 275.9692
 # Standard deviation number of proteins in frail
-sd(num_prot_sample[num_prot_sample$frailty == "FT", "Proteins"])
+sd(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
 # 176.3123
 
 # Mean number of proteins in non-frail
-mean(num_prot_sample[num_prot_sample$frailty == "NFT", "Proteins"])
+mean(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
 # 314.7826
 # Standard deviation number of proteins in non-frail
-sd(num_prot_sample[num_prot_sample$frailty == "NFT", "Proteins"])
+sd(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
 # 188.8102
 
 # Wilcox test number of proteins FT vs NFT
-wilcox.test(Proteins ~ frailty, data = num_prot_sample)
+wilcox.test(proteins ~ frailty, data = num_prot_sample)
 # Wilcoxon rank sum test with continuity correction
 # data:  Proteins by frailty
 # W = 5127, p-value = 0.1004
@@ -325,7 +326,7 @@ p <- ggplot(df, aes(sample, protein, fill = intensity)) +
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "heatmap_na.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Complex Heatmap
 # Clustering rows and columns by binary distance
@@ -343,7 +344,7 @@ p <- Heatmap(missval, name = "NA", col = c("white", "black"),
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "heatmap_clust_na.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 draw(p)
 dev.off()
 
@@ -384,7 +385,7 @@ legends <- packLegend(legend_2, legend_1, direction = "horizontal")
 # Plot heatmap
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "heatmap_clust_na_ann.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 draw(p, heatmap_legend_list = legends, heatmap_legend_side = "top")
 dev.off()
 
@@ -398,7 +399,7 @@ p <- create_density_plot(sample_perce, "percentage",
 
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "density_plot_sample_proportion.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Number of proteins present in more than 25%
 sum(sample_proportion > 0.25)
@@ -443,7 +444,7 @@ proteins_to_keep <- (fraction_ft >= min_fraction) | (fraction_nft >=
 sum(proteins_to_keep) 
 # 185
 
-# Filter SummarizedExperiment
+# Filter SE
 se_filt_miss <- se[proteins_to_keep, ]
 
 # Get protein intensity matrix
@@ -476,10 +477,10 @@ lineage_df$genus <- ifelse(
 proteins_to_keep <- lineage_df[grepl("Bacteria", lineage_df$superkingdom) |
                                  grepl("Homo", lineage_df$genus), "protein_id"]
 
-# Filter SummarizedExperiment
+# Filter SE
 se_filtered <- se_filt_miss[proteins_to_keep, ]
 
-# Save SummarizedExperiment filtered
+# Save SE filtered
 save_path <- paste0(work_path,"/prdea/data/maxlfq/se_filtered.RData")
 save(se_filtered, file = save_path)
 
@@ -504,25 +505,25 @@ prop_na
 # Number of proteins detected per sample
 num_prot_sample <- apply(se_filtered_assay, 2, function(x) sum(!is.na(x)))
 num_prot_sample <- as.data.frame(num_prot_sample)
-colnames(num_prot_sample) <- "Proteins"
-num_prot_sample$Sample <- substr(rownames(num_prot_sample), 1, 7)
+colnames(num_prot_sample) <- "proteins"
+num_prot_sample$sample <- rownames(num_prot_sample)
 rownames(num_prot_sample) <- NULL
 # Add frailty group
 num_prot_sample <- merge(num_prot_sample, col_data[, c("sample", "frailty")], 
-                         by.x = "Sample", by.y = "sample")
+                         by = "sample")
 
 # Summary total proteins detected per sample
 summary(num_prot_sample)
-#Sample             Proteins     frailty  
-#Length:203         Min.   : 13.0   NFT:138  
-#Class :character   1st Qu.:101.5   FT : 65  
-#Mode  :character   Median :137.0            
-#Mean   :125.4            
-#3rd Qu.:159.0            
-#Max.   :180.0   
+# sample             proteins     frailty  
+# Length:203         Min.   : 13.0   NFT:138  
+# Class :character   1st Qu.:101.5   FT : 65  
+# Mode  :character   Median :137.0            
+#                    Mean   :125.4            
+#                    3rd Qu.:159.0            
+#                    Max.   :180.0            
 
 # Density plot number of proteins per sample in FT vs NFT
-p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
+p <- ggplot(num_prot_sample, aes(x = proteins, fill = frailty)) +
   geom_density(linewidth = 0.4, alpha = 0.3) +
   labs(title = "Distribution of proteins per sample",
        x = "Number of proteins", 
@@ -530,6 +531,7 @@ p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
   scale_fill_manual(values = c("FT" = "red", "NFT" = "blue"),
                     labels = c("FT" = "Frail", "NFT" = "Non-Frail")) +
   theme_minimal(base_size = 12) +
+  coord_cartesian(ylim = c(0, 0.015)) +
   theme(
     legend.position = "top",
     legend.title = element_blank()
@@ -537,24 +539,24 @@ p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
 
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "density_plot_num_prot_sample_filt.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Mean number of proteins in frail
-mean(num_prot_sample[num_prot_sample$frailty == "FT", "Proteins"])
+mean(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
 # 118.3385
 # Standard deviation number of proteins in frail
-sd(num_prot_sample[num_prot_sample$frailty == "FT", "Proteins"])
+sd(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
 # 38.23826
 
 # Mean number of proteins in non-frail
-mean(num_prot_sample[num_prot_sample$frailty == "NFT", "Proteins"])
+mean(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
 # 128.7101
 # Standard deviation number of proteins in non-frail
-sd(num_prot_sample[num_prot_sample$frailty == "NFT", "Proteins"])
+sd(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
 # 43.28402
 
 # Wilcox test number of proteins FT vs NFT
-wilcox.test(Proteins ~ frailty, data = num_prot_sample)
+wilcox.test(proteins ~ frailty, data = num_prot_sample)
 # Wilcoxon rank sum test with continuity correction
 # data:  Proteins by frailty
 # W = 5435, p-value = 0.01503
@@ -584,7 +586,7 @@ p <- ggplot(df, aes(sample, protein, fill = intensity)) +
 
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "heatmap_na_filt.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Complex Heatmap
 # Clustering rows and columns by binary distance
@@ -602,7 +604,7 @@ p <- Heatmap(missval, name = "NA", col = c("white", "black"),
 
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "heatmap_clust_na_filt_min.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 draw(p)
 dev.off()
 
@@ -645,7 +647,7 @@ legends <- packLegend(legend_2, legend_1, direction = "horizontal")
 # Plot heatmap
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/heatmap_clust_",
                     "na_ann_filt.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 draw(p, heatmap_legend_list = legends, heatmap_legend_side = "top")
 dev.off()
 
@@ -654,79 +656,95 @@ se_filtered_df <- as.data.frame(se_filtered_assay)
 se_filtered_df$protein_id <- rownames(se_filtered_df)
 rownames(se_filtered_df) <- NULL
 se_filtered_long <- melt(se_filtered_df)
-colnames(se_filtered_long) <- c("protein_id", "Samples", "MaxLFQ")
+colnames(se_filtered_long) <- c("protein_id", "sample", "maxlfq")
 
 # Add metadata
 se_filtered_long <- as.data.frame(merge(se_filtered_long, 
                                         col_data[,c("sample", "frailty")], 
-                                        by.x = "Samples", by.y = "sample"))
+                                        by = "sample"))
 
-summary(se_filtered_long$MaxLFQ)
+summary(se_filtered_long$maxlfq)
 # Min.  1st Qu.   Median     Mean  3rd Qu.     Max.     NA's 
-# 6773    55903    87612   164534   151987 79194328    10202 
+# 6773    55858    87660   164843   152299 79194328    11492
 
-# Plot MaxLFQ vs samples
-p <- ggplot(se_filtered_long, aes(x = Samples, y = MaxLFQ, fill = frailty)) + 
-  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
+sd(se_filtered_long$maxlfq, na.rm = TRUE)
+# 615188.3
+
+# Plot maxlfq vs sample
+p <- ggplot(se_filtered_long, aes(x = sample, y = maxlfq, fill = frailty)) + 
+  geom_boxplot(alpha = 0.8, outlier.size = 0.5, outlier.alpha = 0.5) +
+  labs(x = "Samples", 
+       y = "Protein MaxLFQ intensities") +
+  theme_minimal(base_size = 12) +
   theme(
-    axis.text.x = element_text(angle = 90, size = 6),
-    legend.position = c(0.95, 0.95),
-    legend.background = element_rect(fill = alpha("white", 0.5))) + 
-  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
-  ylim(0, 250000) +
-  facet_wrap(~frailty, scales = "free_x", ncol = 1)
+    axis.text.x = element_blank(), #element_text(angle = 90, size = 4.5)
+    legend.position = "top",
+    legend.title = element_blank()) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail")) +
+  facet_wrap("frailty", scales = "free_x", ncol = 1) +
+  ylim(0, 1000000)
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "boxplot_maxlfq_samples.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-# Plot MaxLFQ vs frailty group
-p <- ggplot(se_filtered_long, aes(x = frailty, y = MaxLFQ, fill = frailty)) + 
-  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
+# Plot maxlfq vs frailty group
+p <- ggplot(se_filtered_long, aes(x = frailty, y = maxlfq, fill = frailty)) + 
+  geom_boxplot(alpha = 0.8, outlier.size = 0.5, outlier.alpha = 0.5) +
+  labs(x = "Frailty group", 
+       y = "Protein MaxLFQ intensities") +
+  theme_minimal(base_size = 12) +
   theme(
-    axis.text.x = element_text(angle = 90, size = 6),
-    legend.position = c(0.95, 0.95),
-    legend.background = element_rect(fill = alpha("white", 0.5))) + 
-  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
-  ylim(0, 250000)
+    axis.text.x = element_text(size = 8),
+    legend.position = "top",
+    legend.title = element_blank()) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail"))
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "boxplot_maxlfq_groups.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot
-p <- ggplot(se_filtered_long, aes(x = MaxLFQ)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal() + 
-  xlim(0, 700000)
+p <- ggplot(se_filtered_long, aes(x = maxlfq)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein MaxLFQ intensities",
+       x = "Protein MaxLFQ intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "density_plot_maxlfq.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
+
+# Get proteins with intensities higher than percentile 99
+q99 <- quantile(se_filtered_long$maxlfq, 0.99, na.rm = TRUE)
+se_filtered_long_q99 <- se_filtered_long[se_filtered_long$maxlfq > q99, ]
+se_filtered_long_q99 <- se_filtered_long_q99[!is.na(se_filtered_long_q99), ]
+prot_q99 <-  se_filtered_long_q99 %>% arrange(desc(maxlfq))
+prot_q99 <- unique(prot_q99$protein_id)
+prot_q99_ann <- GetProteinAnnontate(prot_q99,columns = c("gene_primary",
+                                                         "organism_name",
+                                                          "protein_name",
+                                                          "cc_function"))
+write.csv2(prot_q99_ann, paste0(work_path, "/prdea/output/prot_q99_ann.csv"))
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
-                    "densities_plot_maxlfq.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_filtered_assay, legend = FALSE)
-dev.off()
-
 for (i in 1:nrow(se_filtered_assay)){
   plotDensities(se_filtered_assay[, i], legend = TRUE)
 }
 
-# Standard deviation (sd) and mean are calculated row-wise from the expression
-# matrix. The scatterplot of these versus each other to verify whether there is
-# a dependence of the sd on the mean. The red line running median estimator
-# (window-width 10%). If there is no variance-mean dependence, the line should
-# be aprox. horizontal.
+# Compute row-wise mean and sd. Scatterplot to check mean-variance dependence.
+# Red line: median estimator (window-width 10%). If horizontal, no dependence.
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "scatterplot.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 meanSdPlot(se_filtered_assay)
 dev.off()
 
-# Q-Q sample quantiles vs theoretical quantiles for a normal distribution
+# Q-Q sample vs theoretical quantiles normal distribution
 for (i in 1:ncol(se_filtered_assay)) {
   qqnorm(se_filtered_assay[, i], main = paste("QQ Plot -", 
                                               colnames(se_filtered_assay)[i]))
@@ -751,43 +769,42 @@ se_norm <- se_filtered
 assay(se_norm) <- predict(fit, se_filtered_assay)
 se_norm_assay <- assay(se_norm)
 
-# Save SummarizedExperiment normalized by vsn
+# Save SE normalized by vsn
 save_path <- paste0(work_path,"/prdea/data/maxlfq/se_norm.RData")
 save(se_norm, file = save_path)
 
 # Boxplot maxlfq after vsn
-res <- create_lfq_boxplot(se_norm, col_data)
+res <- create_lfq_boxplot(se_norm_assay, col_data)
 p <- res$plot_samples
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "boxplot_maxlfq_samples_vsn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 p <- res$plot_groups
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "boxplot_maxlfq_groups_vsn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-print(res$maxlfq_summary)
+print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-# 13.10   15.89   16.50   16.66   17.23   24.92   10202 
+# 11.98   15.88   16.50   16.66   17.24   24.92    11492 
 
 # Intensities density plot
 se_norm_long <- res$se_long
-p <- ggplot(se_norm_long, aes(x = MaxLFQ)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()
+
+p <- ggplot(se_norm_long, aes(x = maxlfq)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein MaxLFQ intensities",
+       x = "Protein MaxLFQ intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/density_plot_",
                     "maxlfq_vsn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
-                    "densities_plot_maxlfq_vsn.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_norm_assay, legend = FALSE)
-dev.off()
-
 for (i in 1:nrow(se_norm_assay)){
   plotDensities(se_norm_assay[, i], legend = TRUE)
 }
@@ -795,7 +812,7 @@ for (i in 1:nrow(se_norm_assay)){
 # Scatterplot
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "scatterplot_vsn.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 meanSdPlot(se_norm_assay)
 dev.off()
 
@@ -815,47 +832,50 @@ se_log <- se_filtered
 assay(se_log) <- log2(assay(se_log))
 se_log_assay <- assay(se_log)
 
-# Save SummarizedExperiment log2
+# Save SE log2
 save_path <- paste0(work_path,"/prdea/data/maxlfq/se_log.RData")
 save(se_log, file = save_path)
 
 # Boxplot maxlfq after log2
-res <- create_lfq_boxplot(se_log, col_data)
+res <- create_lfq_boxplot(se_log_assay, col_data)
 p <- res$plot_samples
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/boxplot_maxlfq_",
                     "samples_log2.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 p <- res$plot_groups
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/boxplot_maxlfq_",
                     "groups_log2.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-print(res$maxlfq_summary)
+print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-# 12.73   15.77   16.42   16.60   17.21   26.24   10202 
+# 12.73   15.77   16.42   16.60   17.22   26.24   11492 
+
+print(res$lfq_sd)
+# 1.20735
 
 # Intensities density plot
 se_log_long <- res$se_long
-p <- ggplot(se_log_long, aes(x = MaxLFQ)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()
+
+p <- ggplot(se_log_long, aes(x = maxlfq)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein MaxLFQ intensities",
+       x = "Protein MaxLFQ intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/density_plot_",
                     "maxlfq_log2.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/densities_plot_",
-                    "maxlfq_log2.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_log_assay, legend = FALSE)
-dev.off()
 
 # Scatterplot
 save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
                     "scatterplot_log2.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 meanSdPlot(se_log_assay)
 dev.off()
 
@@ -866,7 +886,7 @@ dev.off()
 # ==================================
 se_no_imp <- se_log
 
-# Save SummarizedExperiment no imputated
+# Save SE no imputated
 save_path <- paste0(work_path,"/prdea/data/maxlfq/se_no_imp.RData")
 save(se_no_imp, file = save_path)
 
@@ -884,42 +904,41 @@ se_perseus_assay <- assay(se_perseus)
 p <- create_pca_plot(se_perseus, n_top_loadings = 5)
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "pca_plot_perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Boxplot maxlfq after perseus
-res <- create_lfq_boxplot(se_perseus, col_data)
+res <- create_lfq_boxplot(se_perseus_assay, col_data)
 p <- res$plot_samples
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "boxplot_maxlfq_samples_perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 p <- res$plot_groups
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "boxplot_maxlfq_groups_perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-print(res$maxlfq_summary)
+print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-# 12.5   14.91   15.93   16.01   16.86   26.24 
+# 11.54   14.81   15.87   15.94   16.82   26.24 
 
 # Intensities density plot
 se_perseus_long <- res$se_long
-p <- ggplot(se_perseus_long, aes(x = MaxLFQ)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()
+p <- ggplot(se_perseus_long, aes(x = maxlfq)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein MaxLFQ intensities",
+       x = "Protein MaxLFQ intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/",
                     "density_plot_maxlfq_perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/",
-                    "densities_plot_maxlfq_perseus.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_perseus_assay, legend = FALSE)
-dev.off()
 
-# Save SummarizedExperiment imputed by perseus
+# Save SE imputed by perseus
 save_path <- paste0(work_path,"/prdea/data/maxlfq/se_perseus.RData")
 save(se_perseus, file = save_path)
 
@@ -927,11 +946,11 @@ save(se_perseus, file = save_path)
 # ==================================
 # 6.2.2. KNN
 # ==================================
-# Delete 10 samples with more than 80% missing values
+# Delete samples with more than 80% missing values
 se_knn <- se_no_imp
 se_knn <- se_knn[, colMeans(is.na(assay(se_knn))) <= 0.8]
 
-# Get colData from SummarizedExperiment
+# Get colData from KNN SE
 col_data <- as.data.frame(colData(se_knn))
 
 # Impute using k-nearest neighbors
@@ -941,41 +960,40 @@ se_knn_assay <- assay(se_knn)
 # Plot PCA
 p <- create_pca_plot(se_knn, n_top_loadings = 5)
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/pca_plot_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Boxplot maxlfq after knn
-res <- create_lfq_boxplot(se_knn, col_data)
+res <- create_lfq_boxplot(se_knn_assay, col_data)
 p <- res$plot_samples
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/boxplot_maxlfq_",
                     "samples_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 p <- res$plot_groups
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/boxplot_maxlfq_",
                     "groups_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-print(res$maxlfq_summary)
+print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-# 12.73   15.68   16.26   16.50   17.09   26.24 
+# 12.73   15.74   16.32   16.50   17.05   26.24 
 
 # Intensities density plot
 se_knn_long <- res$se_long
-p <- ggplot(se_knn_long, aes(x = MaxLFQ)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()
+p <- ggplot(se_knn_long, aes(x = maxlfq)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein MaxLFQ intensities",
+       x = "Protein MaxLFQ intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/density_plot_",
                     "maxlfq_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/prdea/plots/preprocessing/maxlfq/densities_plot_",
-                    "maxlfq_knn.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_knn_assay, legend = FALSE)
-dev.off()
 
-# Save SummarizedExperiment imputed by knn
+# Save SE imputed by knn
 save_path <- paste0(work_path,"/prdea/data/maxlfq/se_knn.RData")
 save(se_knn, file = save_path)

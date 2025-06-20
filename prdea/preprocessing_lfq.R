@@ -3,10 +3,8 @@ library(FragPipeAnalystR)
 library(ggplot2)
 library(limma)
 library(vsn)
-#library(nortest)
 library(dplyr)
 library(SummarizedExperiment)
-#library(reshape2)
 library(ComplexHeatmap)
 library(UniprotR)
 library(impute)
@@ -25,11 +23,8 @@ source(paste0(work_path, "/functions/create_lfq_boxplot.R"))
 # ==================================
 
 # Path to combined_protein.tsv and experiment_annotation.tsv
-fragpipe_path <- paste0("/mnt/d/proteomica/fragilidad/datos/ProteinIdent/",
-                        "MSfraggerSPbacteria/DatosProtIdentCombinados/")
-
-combined_protein <- paste0(fragpipe_path, "combined_protein.tsv")
-experiment_ann <- paste0(fragpipe_path, "experiment_annotation.tsv")
+combined_protein <- paste0(work_path, "/prdea/data/combined_protein.tsv")
+experiment_ann <- paste0(work_path, "/prdea/data/experiment_annotation.tsv")
 
 # Read quant table
 prot_quant <- read.table(combined_protein,
@@ -98,7 +93,7 @@ prot_lfq <- prot_lfq[, !is.na(colnames(prot_lfq))][rownames(exp_anno)]
 row_data <- prot_uniq[, -lfq_col]
 rownames(row_data) <- prot_uniq$ID
 
-# Make SummarizedExperiment
+# Make SummarizedExperiment (SE)
 se <- SummarizedExperiment(
   assays = as.matrix(prot_lfq),
   colData = exp_anno,
@@ -191,7 +186,7 @@ head(colData(se))
 # 4.1. By Missing
 # ==================================
 
-# Get intensities matrix from SummarizedExperiment
+# Get intensities matrix from SE
 se_assay <- assay(se)
 
 # Number of proteins
@@ -199,47 +194,61 @@ nrow(se_assay)
 # 6854
 
 # Number of NA values in assay
-table(is.na(se_assay))
+na_table <- table(is.na(se_assay))
+na_table
 # FALSE    TRUE 
-# 148253 1243109 
-1243109/(1243109+148253)
+# 148253 1243109
+
+prop_na <- na_table["TRUE"] / sum(na_table)
+prop_na
 # 0.8934476
 
-# Number of proteins with all NA
+# Proteins with at least one intensity value
 proteins_to_keep <- apply(se_assay, 1, function(x) !all(is.na(x)))
+
+# Number of proteins to keep
+sum(proteins_to_keep)
+# 6400
+
+# Number of proteins with all NA
 sum(!proteins_to_keep)
 # 454 
 
 # Filter proteins with all NA
-se_assay <- se_assay[proteins_to_keep, ]
 se <- se[proteins_to_keep,]
+se_assay <- se_assay[proteins_to_keep, ]
 
-# Save SummarizedExperiment
-save_path <- paste0(work_path,"/data/lfq/se.RData")
+# Save SE
+save_path <- paste0(work_path,"/prdea/data/lfq/se.RData")
 save(se, file = save_path)
 
-# Get colData from SummarizedExperiment
+# Get colData from SE
 col_data <- as.data.frame(colData(se))
 
-# Number of proteins after filtering those with all NA
+# Check number of proteins after filtering those with all NA
 nrow(se_assay)
 # 6400
 
 # Number of NA values in assay after filtering those with all NA
-table(is.na(se_assay))
+na_table <- table(is.na(se_assay))
+na_table
 # FALSE    TRUE 
-# 148253 1150947 
-1150947/(1150947+148253)
+# 148253 1150947
+
+# NA proportion
+prop_na <- na_table["TRUE"] / sum(na_table)
+prop_na
 # 0.885889
+
 # Number of proteins detected per sample
 num_prot_sample <- apply(se_assay, 2, function(x) sum(!is.na(x)))
 num_prot_sample <- as.data.frame(num_prot_sample)
-colnames(num_prot_sample) <- "Proteins"
-num_prot_sample$Sample <- substr(rownames(num_prot_sample), 1, 7)
+colnames(num_prot_sample) <- "proteins"
+num_prot_sample$sample <- rownames(num_prot_sample)
 rownames(num_prot_sample) <- NULL
 # Add frailty group
 num_prot_sample <- merge(num_prot_sample, col_data[, c("sample", "frailty")], 
-                         by.x = "Sample", by.y = "sample")
+                         by = "sample")
 
 # Summary total proteins detected per sample
 summary(num_prot_sample)
@@ -247,45 +256,52 @@ summary(num_prot_sample)
 # Length:203         Min.   :  40.0   NFT:138  
 # Class :character   1st Qu.: 520.5   FT : 65  
 # Mode  :character   Median : 720.0            
-# Mean   : 730.3            
-# 3rd Qu.: 913.0            
-# Max.   :2054.0            
+#                    Mean   : 730.3            
+#                    3rd Qu.: 913.0            
+#                    Max.   :2054.0            
 
 # Check proteins detected in samples with a low detection
 rownames(se_assay[!is.na(se_assay[,"YDD_248"]), ])
 
 # Density plot number of proteins per sample in FT vs NFT
-p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
-  geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of proteins per sample", x = "Number of proteins", 
+p <- ggplot(num_prot_sample, aes(x = proteins, fill = frailty)) +
+  geom_density(linewidth = 0.4, alpha = 0.3) +
+  labs(title = "Distribution of proteins per sample",
+       x = "Number of proteins", 
        y = "Density") +
-  scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
-  theme_minimal()
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "blue"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail")) +
+  theme_minimal(base_size = 12) +
+  coord_cartesian(ylim = c(0, 0.003)) +
+  theme(
+    legend.position = "top",
+    legend.title = element_blank()
+  )
 
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/",
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/",
                     "density_plot_num_prot_sample.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-# Number of missing per sample
-num_na_sample <- apply(se_assay, 2, function(x) sum(is.na(x)))
-num_na_sample <- as.data.frame(num_na_sample)
-colnames(num_na_sample) <- "NAs"
-num_na_sample$Sample <- substr(rownames(num_na_sample), 1, 7)
-rownames(num_na_sample) <- NULL
-# Add frailty group
-num_na_sample <- merge(num_na_sample, col_data[, c("sample", "frailty")], 
-                       by.x = "Sample", by.y = "sample")
+# Mean number of proteins in frail
+mean(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
+# 660.2308
+# Standard deviation number of proteins in frail
+sd(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
+# 335.1852
 
-# Density plot number of missing per sample in FT vs NFT
-p <- ggplot(num_na_sample, aes(x = NAs, fill = frailty)) +
-  geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of NAs per sample", x = "Number of NAs", y = "Density") +
-  scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
-  theme_minimal()
+# Mean number of proteins in non-frail
+mean(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
+# 763.3188
+# Standard deviation number of proteins in non-frail
+sd(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
+# 361.1816
 
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/", 
-                    "density_plot_num_na_sample.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+# Wilcox test number of proteins FT vs NFT
+wilcox.test(proteins ~ frailty, data = num_prot_sample)
+# Wilcoxon rank sum test with continuity correction
+# data:  proteins by frailty
+# W = 5356.5, p-value = 0.02571
+# alternative hypothesis: true location shift is not equal to 0
 
 # Make binary assay (1 = valid value, 0 = missing value)
 missval <- ifelse(is.na(se_assay), 0, 1)
@@ -309,8 +325,8 @@ p <- ggplot(df, aes(sample, protein, fill = intensity)) +
         axis.ticks.y = element_blank()) +
   scale_fill_gradient(low = "white", high = "black")
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/heatmap_na.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/heatmap_na.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Complex Heatmap
 # Clustering rows and columns by binary distance
@@ -321,85 +337,102 @@ p <- Heatmap(missval, name = "NA", col = c("white", "black"),
              show_row_names = FALSE, 
              # cluster_columns = FALSE,
              # cluster_rows = FALSE,
-             column_split = colData(se)$frailty, 
+             column_split = col_data$frailty, 
              clustering_distance_rows = "binary", 
              clustering_distance_columns = "binary", 
              use_raster = FALSE)
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/heatmap_clust_na.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "heatmap_clust_na.png")
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 draw(p)
 dev.off()
 
 # Annotation of columns by frailty group
-column_ann <- HeatmapAnnotation(frailty = colData(se)$frailty,
-                                col = list(frailty = c("FT" = "red", 
-                                                       "NFT" = "blue")))
-p <- Heatmap(missval, name = "NA", col = c("white", "black"), 
+column_ann <- HeatmapAnnotation(
+  frailty = col_data$frailty,
+  col = list(frailty = c("FT" = "red", "NFT" = "blue")),
+  show_annotation_name = FALSE,
+  show_legend = FALSE
+)
+
+p <- Heatmap(missval, col = c("white", "black"), 
              show_row_dend = FALSE, column_names_gp = gpar(fontsize = 4),
-             show_row_names = FALSE, 
+             show_row_names = FALSE,
+             show_column_names = FALSE,
              #cluster_columns = FALSE, 
              #cluster_rows = FALSE,
              clustering_distance_rows = "binary", 
              clustering_distance_columns = "binary",
              top_annotation = column_ann,
-             use_raster = FALSE)
+             use_raster = FALSE,
+             show_heatmap_legend = FALSE
+             )
+# Heatmap legend
+legend_1 <- Legend(at = c(0, 1),
+                   labels = c("Missing value", "Valid value"),
+                   legend_gp = gpar(fill = c("white", "black")),
+                   title = NULL)
+# Annotation legend
+legend_2 <- Legend(at = c("FT", "NFT"),
+                   labels = c("Frail", "Non-Frail"),
+                   legend_gp = gpar(fill = c("red", "blue")),
+                   title = NULL)
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/heatmap_clust_na_ann.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
-draw(p)
+# Combine legends
+legends <- packLegend(legend_2, legend_1, direction = "horizontal")
+
+# Plot heatmap
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "heatmap_clust_na_ann.png")
+png(save_path, width = 8, height = 4, units = "in", res = 300)
+draw(p, heatmap_legend_list = legends, heatmap_legend_side = "top")
 dev.off()
 
 # Sample proportion for each protein
-presence_proportion <- rowSums(!is.na(se_assay)) / ncol(se_assay)
-sample_percent <- presence_proportion * 100
-sample_percent <- data.frame(SamplePercentage = sample_percent)
-p <- create_density_plot(sample_percent, "SamplePercentage")
+sample_proportion <- rowSums(!is.na(se_assay)) / ncol(se_assay)
+sample_perce <- sample_proportion * 100
+sample_perce <- data.frame(percentage = sample_perce)
+p <- create_density_plot(sample_perce, "percentage",
+                         "Sample proportion (%) per protein",
+                         "Distribution of protein detection across samples")
 
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/",
-                    "density_plot_SamplePercentage.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/",
+                    "density_plot_sample_proportion.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Number of proteins present in more than 25%
-sum(presence_proportion > 0.25)
+sum(sample_proportion > 0.25)
 # 897
 
 # Number of proteins present in more than 50%
-sum(presence_proportion > 0.5)
+sum(sample_proportion > 0.5)
 # 403
 
 # Number of proteins present in more than 75%
-sum(presence_proportion > 0.75)
+sum(sample_proportion > 0.75)
 # 171
 
 # Number of proteins present in 100%
-sum(presence_proportion == 1)
+sum(sample_proportion == 1)
 # 9
 
 # Proteins present in 100% of samples
-rownames(se_assay[presence_proportion == 1,])
-# P00761 --> trypsin
-# P04264 --> Keratin, type II cytoskeletal 1
-# P06702 --> Protein S100-A9: regulation of inflammatory processes and
-# immune response
-# A6KYK2
-# P0DTE7
-# P35527
-# P94316
-# Q8RQP4
-# Q9UGM3
+rownames(se_assay[sample_proportion == 1,])
+# "A6KYK2" "P00761" "P04264" "P06702" "P0DTE7" "P35527" "P94316" "Q8RQP4"
+# "Q9UGM3"
 
 # Proteins in more than 75% of samples
-rownames(se_assay[presence_proportion >= 0.75,])
+rownames(se_assay[sample_proportion >= 0.75,])
 
 # Proteins in less than 50% of samples
-rownames(se_assay[presence_proportion < 0.5,])
+rownames(se_assay[sample_proportion < 0.5,])
 
 # Keep proteins with minimum fraction of valid values in at least one condition
 min_fraction <- 0.5
-fraction_ft <- apply(se_assay[,colData(se)$frailty == "FT"], 1,
+fraction_ft <- apply(se_assay[,col_data$frailty == "FT"], 1,
                      function(x) sum(!is.na(x)) / length(x))
-fraction_nft <- apply(se_assay[, colData(se)$frailty == "NFT"], 1,
+fraction_nft <- apply(se_assay[, col_data$frailty == "NFT"], 1,
                       function(x) sum(!is.na(x)) / length(x))
 
 proteins_to_keep <- (fraction_ft >= min_fraction) | (fraction_nft >= 
@@ -409,77 +442,125 @@ proteins_to_keep <- (fraction_ft >= min_fraction) | (fraction_nft >=
 sum(proteins_to_keep) 
 # 450
 
-# Filter SummarizedExperiment
+# Filter SE
 se_filt_miss <- se[proteins_to_keep, ]
 
-# Get protein intensities matrix from filtered SummarizedExperiment
+# Get protein intensities matrix
 se_filt_miss_assay <- assay(se_filt_miss)
 
-# Number of proteins after filtering those present in <50% of samples in both
-# conditions
+# Check number of proteins after filtering by sample proportion
 nrow(se_filt_miss_assay)
 # 450
 
+# ==================================
+# 4.2. By organism
+# ==================================
+# Get lineage from UniProt
+lineage <- GetProteinAnnontate(rownames(se_filt_miss_assay),
+                               columns = c("lineage"))
+lineage_df <- as.data.frame(lineage)
+lineage_df$protein_id <- rownames(se_filt_miss_assay)
+colnames(lineage_df)[colnames(lineage_df) == "lineage_df"] <- "lineage"
+
+# Get superkingdom from lineage
+lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","),
+                                  function(x) x[2])
+lineage_df$genus <- ifelse(
+  grepl("Eukaryota", lineage_df$superkingdom),
+  sapply(strsplit(lineage_df$lineage, ","), function(x) tail(x, 1)),
+  NA
+)
+
+# Get protein_id from bacteria and homo
+proteins_to_keep <- lineage_df[grepl("Bacteria", lineage_df$superkingdom) |
+                                 grepl("Homo", lineage_df$genus), "protein_id"]
+# Filter SE
+se_filtered <- se_filt_miss[proteins_to_keep, ]
+
+# Save SE filtered
+save_path <- paste0(work_path,"/prdea/data/lfq/se_filtered.RData")
+save(se_filtered, file = save_path)
+
+# Get  protein intensity matrix
+se_filtered_assay <- assay(se_filtered)
+
+# Check number of proteins after filtering no bacteria or homo
+nrow(se_filtered_assay)
+# 442
+
+# Number of NA values in assay after filtering by sample proportion and organism
+na_table <- table(is.na(se_filtered_assay))
+na_table
+# FALSE  TRUE 
+# 62884 26842 
+
+# NA proportion
+prop_na <- na_table["TRUE"] / sum(na_table)
+prop_na
+# 0.2992552
+
 # Number of proteins detected per sample
-num_prot_sample <- apply(se_filt_miss_assay, 2, function(x) sum(!is.na(x)))
+num_prot_sample <- apply(se_filtered_assay, 2, function(x) sum(!is.na(x)))
 num_prot_sample <- as.data.frame(num_prot_sample)
-colnames(num_prot_sample) <- "Proteins"
-num_prot_sample$Sample <- substr(rownames(num_prot_sample), 1, 7)
+colnames(num_prot_sample) <- "proteins"
+num_prot_sample$sample <- rownames(num_prot_sample)
 rownames(num_prot_sample) <- NULL
 # Add frailty group
 num_prot_sample <- merge(num_prot_sample, col_data[, c("sample", "frailty")], 
-                         by.x = "Sample", by.y = "sample")
+                         by = "sample")
 
 # Summary total proteins detected per sample
 summary(num_prot_sample)
-# Sample             Proteins     frailty  
-# Length:203         Min.   : 35.0   NFT:138  
-# Class :character   1st Qu.:263.0   FT : 65  
-# Mode  :character   Median :338.0            
-# Mean   :315.2            
-# 3rd Qu.:385.0            
-# Max.   :446.0            
+# sample             proteins     frailty  
+# Length:203         Min.   : 34.0   NFT:138  
+# Class :character   1st Qu.:257.5   FT : 65  
+# Mode  :character   Median :331.0            
+#                    Mean   :309.8            
+#                    3rd Qu.:379.5            
+#                    Max.   :438.0     
 
 # Density plot number of proteins per sample in FT vs NFT
-p <- ggplot(num_prot_sample, aes(x = Proteins, fill = frailty)) +
-  geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of proteins per sample", x = "Number of proteins", 
+p <- ggplot(num_prot_sample, aes(x = proteins, fill = frailty)) +
+  geom_density(linewidth = 0.4, alpha = 0.3) +
+  labs(title = "Distribution of proteins per sample",
+       x = "Number of proteins", 
        y = "Density") +
-  scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
-  theme_minimal()
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "blue"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail")) +
+  theme_minimal(base_size = 12) +
+  coord_cartesian(ylim = c(0, 0.015)) +
+  theme(
+    legend.position = "top",
+    legend.title = element_blank()
+  )
 
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/density_plot_",
-                    "num_prot_sample_filt_min_fract.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/density_plot_",
+                    "num_prot_sample_filt.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-# Number of NA values in assay
-table(is.na(se_filt_miss_assay))
-# FALSE  TRUE 
-# 63977 27373 
+# Mean number of proteins in frail
+mean(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
+# 292.8615
+# Standard deviation number of proteins in frail
+sd(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
+# 83.60059
 
-# Number of missing per sample
-num_na_sample <- apply(se_filt_miss_assay, 2, function(x) sum(is.na(x)))
-num_na_sample <- as.data.frame(num_na_sample)
-colnames(num_na_sample) <- "NAs"
-num_na_sample$Sample <- substr(rownames(num_na_sample), 1, 7)
-rownames(num_na_sample) <- NULL
-# Add frailty group
-num_na_sample <- merge(num_na_sample, col_data[, c("sample", "frailty")], 
-                       by.x = "Sample", by.y = "sample")
+# Mean number of proteins in non-frail
+mean(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
+# 317.7391
+# Standard deviation number of proteins in non-frail
+sd(num_prot_sample[num_prot_sample$frailty == "NFT", "proteins"])
+# 92.70598
 
-# Density plot number of missing per sample in FT vs NFT
-p <- ggplot(num_na_sample, aes(x = NAs, fill = frailty)) +
-  geom_density(alpha = 0.4, linewidth = 0.2) +
-  labs(title = "Number of NAs per sample", x = "Number of NAs", y = "Density") +
-  scale_fill_manual(values = c("FT" = "blue", "NFT" = "red")) +
-  theme_minimal()
+# Wilcox test number of proteins FT vs NFT
+wilcox.test(proteins ~ frailty, data = num_prot_sample)
+# Wilcoxon rank sum test with continuity correction
+# data:  proteins by frailty
+# W = 5500.5, p-value = 0.00934
+# alternative hypothesis: true location shift is not equal to 0
 
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/density_plot_",
-                    "num_na_sample_filt_min_fract.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
-
-# Make binary assay (1 = valid value, 0 = missing value)
-missval <- ifelse(is.na(se_filt_miss_assay), 0, 1)
+# Make binary assay
+missval <- ifelse(is.na(se_filtered_assay), 0, 1)
 
 # Convert matrix to long format dataframe
 df <- melt(missval)
@@ -500,210 +581,167 @@ p <- ggplot(df, aes(sample, protein, fill = intensity)) +
         axis.ticks.y = element_blank()) +
   scale_fill_gradient(low = "white", high = "black")
 
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/",
-                    "heatmap_na_filt_min_fract.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/",
+                    "heatmap_na_filt.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Complex Heatmap
 # Clustering rows and columns by binary distance
 # Column split by frailty groups
-p <- Heatmap(missval, name = "NA", col = c("white", "black"),
+p <- Heatmap(missval, col = c("white", "black"),
              show_row_dend = FALSE, 
-             column_names_gp = gpar(fontsize = 4), show_row_names = FALSE,
+             column_names_gp = gpar(fontsize = 4),
+             show_row_names = FALSE,
              # cluster_columns = FALSE,
              # cluster_rows = FALSE,
              column_split = col_data$frailty,
              clustering_distance_rows = "binary",
-             clustering_distance_columns = "binary")
+             clustering_distance_columns = "binary",
+             use_raster = FALSE)
 
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/heatmap_clust_",
-                    "na_filt_min_fract.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/heatmap_clust_",
+                    "na_filt.png")
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 draw(p)
 dev.off()
 
 # Annotation of columns by frailty group
-column_ann <- HeatmapAnnotation(frailty = col_data$frailty,
-                                col = list(frailty = c("FT" = "red", 
-                                                       "NFT" = "blue")))
-p <- Heatmap(missval, name = "NA", col = c("white", "black"),
+column_ann <- HeatmapAnnotation(
+  frailty = col_data$frailty,
+  col = list(frailty = c("FT" = "red", "NFT" = "blue")),
+  show_annotation_name = FALSE,
+  show_legend = FALSE
+  )
+
+p <- Heatmap(missval, col = c("white", "black"),
              show_row_dend = FALSE,
-             column_names_gp = gpar(fontsize = 4), show_row_names = FALSE,
+             column_names_gp = gpar(fontsize = 4),
+             show_row_names = FALSE,
+             show_column_names = FALSE,
              # cluster_columns = FALSE,
              # cluster_rows = FALSE,
              clustering_distance_rows = "binary",
              clustering_distance_columns = "binary",
-             top_annotation = column_ann)
+             top_annotation = column_ann,
+             use_raster = FALSE,
+             show_heatmap_legend = FALSE
+             )
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/heatmap_clust_",
-                    "na_ann_filt_min_fract.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
-draw(p)
+# Heatmap legend
+legend_1 <- Legend(at = c(0, 1),
+                   labels = c("Missing value", "Valid value"),
+                   legend_gp = gpar(fill = c("white", "black")),
+                   title = NULL)
+# Annotation legend
+legend_2 <- Legend(at = c("FT", "NFT"),
+                   labels = c("Frail", "Non-Frail"),
+                   legend_gp = gpar(fill = c("red", "blue")),
+                   title = NULL)
+
+# Combine legends
+legends <- packLegend(legend_2, legend_1, direction = "horizontal")
+
+# Plot heatmap
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "heatmap_clust_na_ann_filt.png")
+png(save_path, width = 8, height = 4, units = "in", res = 300)
+draw(p, heatmap_legend_list = legends, heatmap_legend_side = "top")
 dev.off()
-
-# ==================================
-# 4.2. By organism
-# ==================================
-# Get lineage from UniProt
-lineage <- GetProteinAnnontate(rownames(se_filt_miss_assay),
-                               columns = c("lineage"))
-lineage_df <- as.data.frame(lineage)
-lineage_df$protein_id <- rownames(se_filt_miss_assay)
-colnames(lineage_df)[colnames(lineage_df) == "lineage_df"] <- "lineage"
-# Get superkingdom from lineage
-lineage_df$superkingdom <- sapply(strsplit(lineage_df$lineage, ","),
-                                  function(x) x[2])
-lineage_df$genus <- ifelse(
-  grepl("Eukaryota", lineage_df$superkingdom),
-  sapply(strsplit(lineage_df$lineage, ","), function(x) tail(x, 1)),
-  NA
-)
-
-
-# Get protein_id from bacteria proteins
-proteins_to_keep <- lineage_df[grepl("Bacteria", lineage_df$superkingdom) |
-                                 grepl("Homo", lineage_df$genus), 
-                               "protein_id"]
-# Filter SummarizedExperiment
-se_filt_org <- se_filt_miss[proteins_to_keep, ]
-
-# Number of proteins after filtering no bacteria proteins
-nrow(se_filt_org)
-# 442
-
-se_filt_org_assay <- assay(se_filt_org)
-
-# ==================================
-# 4.3. (NO) By abundance
-# ==================================
-# - Ribosome subunits
-# - Elongation factor Tu
-# - Keratin
-# ==================================
-ribosub <- rowData(se_filt_org)[grep("ribosomal",
-                                      rowData(se_filt_org)$Description),
-                                 c("Protein ID", "Organism", "Description")]
-ribosub <- as.data.frame(ribosub)
-eftu <- rowData(se_filt_org)[grep("Elongation factor Tu",
-                                   rowData(se_filt_org)$Description),
-                              c("Protein ID", "Organism", "Description")]
-eftu <- as.data.frame(eftu)
-keratin <- rowData(se_filt_org)[grep("Keratin",
-                                      rowData(se_filt_org)$Description),
-                                 c("Protein ID", "Organism", "Description")]
-keratin <- as.data.frame(keratin)
-
-#se_filtered <- se_filt_bact[-grep("ribosomal", 
-#                                  rowData(se_filt_bact)$Description), ]
-#se_filtered <- se_filtered[-grep("Elongation factor Tu", 
-#                                 rowData(se_filtered)$Description), ]
-#se_filtered <- se_filtered[-grep("Keratin", 
-#                                 rowData(se_filtered)$Description), ]
-
-se_filtered <- se_filt_org
-se_filtered_assay <- se_filt_org_assay
-
-nrow(se_filtered_assay)
-# 442
-
-# Save SummarizedExperiment filtered
-save_path <- paste0(work_path,"/data/lfq/se_filtered.RData")
-save(se_filtered, file = save_path)
-
-# Boxplot lfq after filtering
-#res <- create_lfq_boxplot(se_filtered, col_data, lfq_type = "Intensity")
-#print(res$plot_samples)
-#print(res$plot_groups)
-#print(res$lfq_summary)
 
 # Transform se_filtered assay to long
 se_filtered_df <- as.data.frame(se_filtered_assay)
 se_filtered_df$protein_id <- rownames(se_filtered_df)
 rownames(se_filtered_df) <- NULL
 se_filtered_long <- melt(se_filtered_df)
-colnames(se_filtered_long) <- c("protein_id", "Samples", "Intensity")
+colnames(se_filtered_long) <- c("protein_id", "sample", "intensity")
 
 # Add metadata
 se_filtered_long <- as.data.frame(merge(se_filtered_long, 
                                         col_data[,c("sample", "frailty")], 
-                                        by.x = "Samples", by.y = "sample"))
+                                        by = "sample"))
 
-summary(se_filtered_long$Intensity)
+summary(se_filtered_long$intensity)
 # Min.   1st Qu.    Median      Mean   3rd Qu.      Max.      NA's 
 # 192     42321     90238    284668    211653 643911360     26842 
 
-# Plot intensity vs samples
-p <- ggplot(se_filtered_long, aes(x = Samples, y = Intensity, fill = frailty)) + 
-  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
-  theme(
-    axis.text.x = element_text(angle = 90, size = 6),
-    legend.position = c(0.95, 0.95),
-    legend.background = element_rect(fill = alpha("white", 0.5))) + 
-  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
-  ylim(0, 250000) +
-  facet_wrap(~frailty, scales = "free_x", ncol = 1)
+sd(se_filtered_long$intensity, na.rm = TRUE)
+# 2956390
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_samples.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+# Plot intensity vs sample
+p <- ggplot(se_filtered_long, aes(x = sample, y = intensity, fill = frailty)) + 
+  geom_boxplot(alpha = 0.8, outlier.size = 0.5, outlier.alpha = 0.5) +
+  labs(x = "Samples", 
+      y = "Protein Top-N intensities") +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_blank(), #element_text(angle = 90, size = 4.5)
+    legend.position = "top",
+    legend.title = element_blank()) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail")) +
+  facet_wrap("frailty", scales = "free_x", ncol = 1) +
+  ylim(0, 1000000)
+
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "boxplot_lfq_samples.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Plot intensity vs frailty group
-p <- ggplot(se_filtered_long, aes(x = frailty, y = Intensity, fill = frailty)) + 
-  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.5) +
+p <- ggplot(se_filtered_long, aes(x = frailty, y = intensity, fill = frailty)) + 
+  geom_boxplot(alpha = 0.8, outlier.size = 0.5, outlier.alpha = 0.5) +
+  labs(x = "Frailty group", 
+       y = "Protein Top-N intensities") +
+  theme_minimal(base_size = 12) +
   theme(
-    axis.text.x = element_text(angle = 90, size = 6),
-    legend.position = c(0.95, 0.95),
-    legend.background = element_rect(fill = alpha("white", 0.5))) + 
-  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple")) +
-  ylim(0, 250000)
+    axis.text.x = element_text(size = 8),
+    legend.position = "top",
+    legend.title = element_blank()) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "purple"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail"))
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_groups.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "boxplot_lfq_groups.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot
-p <- ggplot(se_filtered_long, aes(x = Intensity)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal() + 
-  xlim(0, 700000)
+p <- ggplot(se_filtered_long, aes(x = intensity)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein Top-N intensities",
+        x = "Protein Top-N intensities", 
+        y = "Density") +
+  theme_minimal(base_size = 12)
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/density_plot_lfq.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "density_plot_lfq.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
-# Get proteins with intensities higher than percentile 95%
-#Q95 <- quantile(se_filtered_long$LFQ, 0.95, na.rm = TRUE)
-#se_filtered_long_q95 <- se_filtered_long[se_filtered_long$LFQ > Q95, ]
-#se_filtered_long_q95 <- se_filtered_long_q95[!is.na(se_filtered_long_q95), ]
-#prot_q95 <-  se_filtered_long_q95 %>% arrange(desc(LFQ))
-#prot_q95 <- unique(prot_q95$protein_id)
-#prot_q95_ann <- GetProteinAnnontate(prot_q95,columns = c("gene_primary",
-#                                                         "organism_name",
-#                                                          "protein_name",
-#                                                          "cc_function"))
-#write.csv2(prot_q95_ann, "prot_q95_ann.csv")
+# Get proteins with intensities higher than percentile 99
+q99 <- quantile(se_filtered_long$intensity, 0.99, na.rm = TRUE)
+se_filtered_long_q99 <- se_filtered_long[se_filtered_long$intensity > q99, ]
+se_filtered_long_q99 <- se_filtered_long_q99[!is.na(se_filtered_long_q99), ]
+prot_q99 <-  se_filtered_long_q99 %>% arrange(desc(intensity))
+prot_q99 <- unique(prot_q99$protein_id)
+prot_q99_ann <- GetProteinAnnontate(prot_q99,columns = c("gene_primary",
+                                                         "organism_name",
+                                                         "protein_name",
+                                                         "cc_function"))
+write.csv2(prot_q99_ann, paste0(work_path, "/prdea/output/prot_q99_ann_2.csv"))
 
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/densities_plot_lfq.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_filtered_assay, legend = FALSE)
-dev.off()
+for (i in 1:nrow(se_filtered_assay)){
+  plotDensities(se_filtered_assay[, i], legend = TRUE)
+}
 
-#for (i in 1:nrow(se_filtered_assay)){
-#  plotDensities(se_filtered_assay[, i], legend = TRUE)
-#}
-
-# Standard deviation (sd) and mean are calculated row-wise from the expression
-# matrix. The scatterplot of these versus each other to verify whether there is
-# a dependence of the sd on the mean. The red line running median estimator
-# (window-width 10%). If there is no variance-mean dependence, the line should
-# be aprox. horizontal.
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/scatterplot.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+# Compute row-wise mean and sd. Scatterplot to check mean-variance dependence.
+# Red line: median estimator (window-width 10%). If horizontal, no dependence.
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/scatterplot.png")
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 meanSdPlot(se_filtered_assay)
 dev.off()
 
-#plotMA(se_filtered_assay)
-
-# Q-Q sample quantiles vs theoretical quantiles for a normal distribution
+# Q-Q sample vs theoretical quantiles normal distribution
 for (i in 1:ncol(se_filtered_assay)) {
   qqnorm(se_filtered_assay[, i], main = paste("QQ Plot -", 
                                               colnames(se_filtered_assay)[i]))
@@ -729,21 +767,22 @@ se_norm <- se_filtered
 assay(se_norm) <- predict(fit, se_filtered_assay)
 se_norm_assay <- assay(se_norm)
 
-# Save SummarizedExperiment normalized by vsn
-save_path <- paste0(work_path,"/data/lfq/se_norm.RData")
+# Save SE normalized by vsn
+save_path <- paste0(work_path,"/prdea/data/lfq/se_norm.RData")
 save(se_norm, file = save_path)
 
 # Boxplot lfq after vsn
-res <- create_lfq_boxplot(se_norm, col_data, lfq_type = "Intensity")
+res <- create_lfq_boxplot(se_norm_assay, col_data, lfq_type = "intensity", 
+                          y_lab = "Protein Top-N intensities")
 p <- res$plot_samples
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_",
-                    "samples_vsn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "boxplot_lfq_samples_vsn.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 p <- res$plot_groups
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_",
-                    "groups_vsn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "boxplot_lfq_groups_vsn.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
@@ -751,28 +790,26 @@ print(res$lfq_summary)
 
 # Intensities density plot
 se_norm_long <- res$se_long
-p <- ggplot(se_norm_long, aes(x = Intensity)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()
+p <- ggplot(se_norm_long, aes(x = intensity)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein Top-N intensities",
+       x = "Protein Top-N intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/density_plot_",
-                    "lfq_vsn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "density_plot_lfq_vsn.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/densities_plot_",
-                    "lfq_vsn.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_norm_assay, legend = FALSE)
-dev.off()
-
-#for (i in 1:nrow(se_norm_assay)){
-#  plotDensities(se_norm_assay[, i], legend = TRUE)
-#}
+for (i in 1:nrow(se_norm_assay)){
+  plotDensities(se_norm_assay[, i], legend = TRUE)
+}
 
 # Scatterplot
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/scatterplot_vsn.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/scatterplot_vsn.png")
+png(save_path, width = 8, height = 4, units = "in", res = 300)
 meanSdPlot(se_norm_assay)
 dev.off()
 
@@ -791,8 +828,8 @@ summary(norm_results)
 # ==================================
 se_no_imp <- se_norm
 
-# Save SummarizedExperiment no imputated
-save_path <- paste0(work_path,"/data/lfq/se_no_imp.RData")
+# Save SE no imputated
+save_path <- paste0(work_path,"/prdea/data/lfq/se_no_imp.RData")
 save(se_no_imp, file = save_path)
 
 # ==================================
@@ -807,20 +844,22 @@ se_perseus_assay <- assay(se_perseus)
 
 # Plot PCA
 p <- create_pca_plot(se_perseus, n_top_loadings = 5)
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/pca_plot_perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "pca_plot_perseus.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Boxplot lfq after perseus
-res <- create_lfq_boxplot(se_perseus, col_data, lfq_type = "Intensity")
+res <- create_lfq_boxplot(se_perseus_assay, col_data, lfq_type = "intensity",
+                          y_lab = "Protein Top-N intensities")
 p <- res$plot_samples
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_",
-                    "samples_perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "boxplot_lfq_samples_perseus.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 p <- res$plot_groups
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_",
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/boxplot_lfq_",
                     "groups_perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -828,34 +867,33 @@ print(res$lfq_summary)
 
 # Intensities density plot
 se_perseus_long <- res$se_long
-p <- ggplot(se_perseus_long, aes(x = Intensity)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()
+p <- ggplot(se_perseus_long, aes(x = intensity)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein Top-N intensities",
+       x = "Protein Top-N intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/density_plot_lfq_",
-                    "perseus.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "density_plot_lfq_perseus.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/densities_plot_lfq_",
-                    "perseus.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_perseus_assay, legend = FALSE)
-dev.off()
 
-# Save SummarizedExperiment imputed by perseus
-save_path <- paste0(work_path,"/data/lfq/se_perseus.RData")
+# Save SE imputed by perseus
+save_path <- paste0(work_path,"/prdea/data/lfq/se_perseus.RData")
 save(se_perseus, file = save_path)
 
 
 # ==================================
 # 6.2.2. KNN
 # ==================================
-# Delete 10 samples with more than 80% missing values
+# Delete samples with more than 80% missing values
 se_knn <- se_no_imp
 se_knn <- se_knn[, colMeans(is.na(assay(se_knn))) <= 0.8]
 
-# Get colData from SummarizedExperiment
+# Get colData from knn SE
 col_data <- as.data.frame(colData(se_knn))
 
 # Impute using k-nearest neighbors
@@ -864,20 +902,21 @@ se_knn_assay <- assay(se_knn)
 
 # Plot PCA
 p <- create_pca_plot(se_knn, n_top_loadings = 5)
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/pca_plot_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/pca_plot_knn.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Boxplot lfq after knn
-res <- create_lfq_boxplot(se_knn, col_data, lfq_type = "Intensity")
+res <- create_lfq_boxplot(se_knn_assay, col_data, lfq_type = "intensity",
+                          y_lab = "Protein Top-N intensities")
 p <- res$plot_samples
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_",
-                    "samples_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "boxplot_lfq_samples_knn.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 p <- res$plot_groups
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/boxplot_lfq_",
-                    "groups_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "boxplot_lfq_groups_knn.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -885,21 +924,20 @@ print(res$lfq_summary)
 
 # Intensities density plot
 se_knn_long <- res$se_long
-p <- ggplot(se_knn_long, aes(x = Intensity)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  theme_minimal()
+p <- ggplot(se_knn_long, aes(x = intensity)) +
+  geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  labs(title = "Distribution of protein Top-N intensities",
+       x = "Protein Top-N intensities", 
+       y = "Density") +
+  theme_minimal(base_size = 12)
 
-save_path <- paste0(work_path,"/plots/preprocessing/lfq/density_plot_",
-                    "lfq_knn.png")
-ggsave(filename = save_path, plot = p, width = 8, height = 6, dpi = 300)
+save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
+                    "density_plot_lfq_knn.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 # Intensities density plot per sample
-save_path <- paste0(work_path, "/plots/preprocessing/lfq/densities_plot_",
-                    "lfq_knn.png")
-png(save_path, width = 8, height = 6, units = "in", res = 300)
 plotDensities(se_knn_assay, legend = FALSE)
-dev.off()
 
-# Save SummarizedExperiment imputed by knn
-save_path <- paste0(work_path,"/data/lfq/se_knn.RData")
+# Save SE imputed by knn
+save_path <- paste0(work_path,"/prdea/data/lfq/se_knn.RData")
 save(se_knn, file = save_path)
