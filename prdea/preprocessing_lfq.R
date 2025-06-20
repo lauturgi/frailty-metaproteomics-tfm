@@ -282,6 +282,23 @@ save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/",
                     "density_plot_num_prot_sample.png")
 ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
+p <- ggplot(num_prot_sample, aes(x = frailty, y = proteins, fill = frailty)) + 
+  geom_boxplot(alpha = 0.3, outlier.size = 0.5, outlier.alpha = 0.5) +
+  coord_cartesian(ylim = c(0, 2010)) +
+  labs(x = "Frailty group", 
+       y = "Number of proteins") +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    legend.title = element_blank()) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "blue"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail"))
+
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/",
+                    "boxplot_num_prot_sample.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
+
+
 # Mean number of proteins in frail
 mean(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
 # 660.2308
@@ -538,6 +555,22 @@ save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/density_plot_",
                     "num_prot_sample_filt.png")
 ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
+p <- ggplot(num_prot_sample, aes(x = frailty, y = proteins, fill = frailty)) + 
+  geom_boxplot(alpha = 0.3, outlier.size = 0.5, outlier.alpha = 0.5) +
+  coord_cartesian(ylim = c(0, 450)) +
+  labs(x = "Frailty group", 
+       y = "Number of proteins") +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    legend.title = element_blank()) + 
+  scale_fill_manual(values = c("FT" = "red", "NFT" = "blue"),
+                    labels = c("FT" = "Frail", "NFT" = "Non-Frail"))
+
+save_path <- paste0(work_path, "/prdea/plots/preprocessing/lfq/",
+                    "boxplot_num_prot_sample_filt.png")
+ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
+
 # Mean number of proteins in frail
 mean(num_prot_sample[num_prot_sample$frailty == "FT", "proteins"])
 # 292.8615
@@ -706,6 +739,7 @@ ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 # Intensities density plot
 p <- ggplot(se_filtered_long, aes(x = intensity)) +
   geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  coord_cartesian(ylim = c(0, 0.000025)) +
   labs(title = "Distribution of protein Top-N intensities",
         x = "Protein Top-N intensities", 
         y = "Density") +
@@ -786,12 +820,15 @@ ggsave(filename = save_path, plot = p, width = 8, height = 4, dpi = 300)
 
 print(res$lfq_summary)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-# 7.579  15.350  16.430  16.580  17.626  27.863   26842  
+# 7.579  15.350  16.430  16.580  17.626  27.863   26842
+
+print(res$lfq_sd)
 
 # Intensities density plot
 se_norm_long <- res$se_long
 p <- ggplot(se_norm_long, aes(x = intensity)) +
   geom_density(fill = "blue", linewidth = 0.4, alpha = 0.4) +
+  #coord_cartesian(ylim = c(0, 0.4)) +
   labs(title = "Distribution of protein Top-N intensities",
        x = "Protein Top-N intensities", 
        y = "Density") +
