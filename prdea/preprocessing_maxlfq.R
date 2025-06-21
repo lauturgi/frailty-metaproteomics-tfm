@@ -871,7 +871,8 @@ save_path <- paste0(work_path,"/prdea/data/maxlfq/se_log.RData")
 save(se_log, file = save_path)
 
 # Boxplot maxlfq after log2
-res <- create_lfq_boxplot(se_log_assay, col_data)
+res <- create_lfq_boxplot(se_log_assay, col_data, y_lim = c(7.5, 28),
+                          y_lab = "Protein log2 MaxLFQ intensity")
 p <- res$plot_samples
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/maxlfq/boxplot_maxlfq_",
                     "samples_log2.png")

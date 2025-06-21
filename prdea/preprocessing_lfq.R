@@ -805,9 +805,11 @@ se_norm_assay <- assay(se_norm)
 save_path <- paste0(work_path,"/prdea/data/lfq/se_norm.RData")
 save(se_norm, file = save_path)
 
+
 # Boxplot lfq after vsn
 res <- create_lfq_boxplot(se_norm_assay, col_data, lfq_type = "intensity", 
-                          y_lab = "Protein Top-N intensities")
+                          y_lim = c(7.5, 28),
+                          y_lab = "Protein VSN Top-N intensity")
 p <- res$plot_samples
 save_path <- paste0(work_path,"/prdea/plots/preprocessing/lfq/",
                     "boxplot_lfq_samples_vsn.png")

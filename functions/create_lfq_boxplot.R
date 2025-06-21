@@ -9,7 +9,8 @@ create_lfq_boxplot <- function(se_assay, col_data, group_col = "frailty",
                                fill_labels = c("FT" = "Frail",
                                                "NFT" = "Non-Frail"),
                                lfq_type = "maxlfq",
-                               y_lab = "Protein MaxLFQ intensities") {
+                               y_lab = "Protein MaxLFQ intensities", 
+                               y_lim = FALSE) {
   
   # Transform se matrix to long dataframe
   se_df <- as.data.frame(se_assay)
@@ -42,6 +43,11 @@ create_lfq_boxplot <- function(se_assay, col_data, group_col = "frailty",
     scale_fill_manual(values = fill_colors,
                       labels = fill_labels) +
     facet_wrap(~.data[[group_col]], scales = "free_x", ncol = 1)
+  
+  # Add y lim if specified
+  if (!isFALSE(y_lim)) {
+    plot_1 <- plot_1 + coord_cartesian(ylim = y_lim)
+  }
   
   # Plot intensity vs groups
   plot_2 <- ggplot(se_long, aes(x = .data[[group_col]],
