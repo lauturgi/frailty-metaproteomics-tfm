@@ -1,26 +1,23 @@
-# Install dependencies of Uniprot
-#sudo apt update
-#sudo apt install libmagick++-dev
-#renv::install("UniprotR")
 # Load libraries
+library(SummarizedExperiment)
 library(ggplot2)
 library(limma)
 library(dplyr)
 library(UniprotR)
 
 # ==================================
+# Running DE analysis with data from preprocessing
+# ==================================
 # A) Limma analysis from MaxLFQ
 # ==================================
-# Running DE analysis with data from preprocessing no imputed:
 # - MaxLFQ,
 # - log2transformed,
 # - NA in at least 1 condition < 0.5,
 # - only bacteria and human proteins,
 # - no imputation
 # ==================================
-# B) Limma analysis from intensity
+# B) Limma analysis from Top-N
 # ==================================
-# Running DE analysis with data from preprocessing no imputed:
 # - Norm intensities by VSN,
 # - NA in at least 1 condition < 0.5,
 # - only bacteria and human proteins,
@@ -37,9 +34,9 @@ source(paste0(work_path, "/functions/create_volcano_plot.R"))
 de_option <- "A"
 
 if (de_option == "A"){
-  data_path <- paste0(work_path, "/data/maxlfq/")
-  plot_path <- paste0(work_path, "/plots/limma_analysis/maxlfq/")
-  output_file <- "sig_prot_no_imp_maxlfq_"
+  data_path <- paste0(work_path, "/prdea/data/maxlfq/")
+  plot_path <- paste0(work_path, "/prdea/plots/limma_analysis/maxlfq/")
+  output_path <- paste0(work_path, "/prdea/output/maxlfq/sig_prot_no_imp_")
   load(paste0(data_path, "/se_no_imp.RData"))
 } else if (de_option == "B"){
   data_path <- paste0(work_path, "/data/lfq/")
@@ -97,8 +94,12 @@ diff_1_ann <- merge(diff_1, prot_ann, by = "row.names")
 row.names(diff_1_ann) <- diff_1_ann$Row.names
 diff_1_ann$Row.names <- NULL
 
+# Order by adj.P.Val and logFC
+diff_1_ann <- diff_1_ann[order(diff_1_ann$adj.P.Val,
+                                 -abs(diff_1_ann$logFC)), ]
+
 # Save sig_prot_no_imp_(max)lfq_ft.csv
-write.csv(diff_1_ann, file = paste0(output_file, "ft.csv"), row.names = TRUE)
+write.csv(diff_1_ann, file = paste0(output_path, "ft.csv"), row.names = TRUE)
 
 sel0 = which("A9KJL3"==rownames(assay(se_no_imp)))
 df0 = data.frame(frailty=colData(se_no_imp)[,c("frailty")],
@@ -172,8 +173,12 @@ diff_4_ann <- merge(diff_4, prot_ann, by = "row.names")
 row.names(diff_4_ann) <- diff_4_ann$Row.names
 diff_4_ann$Row.names <- NULL
 
+# Order by adj.P.Val and logFC
+diff_4_ann <- diff_4_ann[order(diff_4_ann$adj.P.Val,
+                                 -abs(diff_4_ann$logFC)), ]
+
 # Save sig_prot_no_imp_(max)lfq_ft_sex.csv
-write.csv(diff_4_ann, file = paste0(output_file, "ft_sex.csv"), row.names = TRUE)
+write.csv(diff_4_ann, file = paste0(output_path, "ft_sex.csv"), row.names = TRUE)
 
 sel0 = which("C4Z0Q6"==rownames(assay(se_no_imp)))
 df0 = data.frame(frailty=colData(se_no_imp)[,c("frailty")], 
@@ -364,11 +369,15 @@ diff_14_ann <- merge(diff_14, prot_ann, by = "row.names")
 row.names(diff_14_ann) <- diff_14_ann$Row.names
 diff_14_ann$Row.names <- NULL
 
+# Order by adj.P.Val and logFC
+diff_14_ann <- diff_14_ann[order(diff_14_ann$adj.P.Val,
+                                 -abs(diff_14_ann$logFC)), ]
+
 # Save sig_prot_no_imp_(max)lfq_ft_tobacco_current.csv
-write.csv(diff_14_ann, file = paste0(output_file, "ft_tobacco_current.csv"),
+write.csv(diff_14_ann, file = paste0(output_path, "ft_tobacco_current.csv"),
           row.names = TRUE)
 
-sel0 = which("A6KYH6"==rownames(assay(se_no_imp_tobacco)))
+sel0 = which("P0C2E7"==rownames(assay(se_no_imp_tobacco)))
 df0 = data.frame(frailty=colData(se_no_imp_tobacco)[,c("frailty")], 
                  tobacco=colData(se_no_imp_tobacco)[,c("tobacco")], 
                  expression=assay(se_no_imp_tobacco)[sel0,])
@@ -460,8 +469,12 @@ diff_17_ann <- merge(diff_17, prot_ann, by = "row.names")
 row.names(diff_17_ann) <- diff_17_ann$Row.names
 diff_17_ann$Row.names <- NULL
 
+# Order by adj.P.Val and logFC
+diff_17_ann <- diff_17_ann[order(diff_17_ann$adj.P.Val,
+                                 -abs(diff_17_ann$logFC)), ]
+
 # Save sig_prot_no_imp_(max)lfq_alcohol_weekly.csv
-write.csv(diff_17_ann, file = paste0(output_file, "alcohol_weekly.csv"),
+write.csv(diff_17_ann, file = paste0(output_path, "alcohol_weekly.csv"),
           row.names = TRUE)
 
 diff_18 <- diff_18[diff_18$adj.P.Val < 0.05, ]
@@ -488,8 +501,12 @@ diff_19_ann <- merge(diff_19, prot_ann, by = "row.names")
 row.names(diff_19_ann) <- diff_19_ann$Row.names
 diff_19_ann$Row.names <- NULL
 
+# Order by adj.P.Val and logFC
+diff_19_ann <- diff_19_ann[order(diff_19_ann$adj.P.Val,
+                                 -abs(diff_19_ann$logFC)), ]
+
 # Save sig_prot_no_imp_(max)lfq_ft_alcohol_weekly.csv
-write.csv(diff_19_ann, file = paste0(output_file, "ft_alcohol_weekly.csv"),
+write.csv(diff_19_ann, file = paste0(output_path, "ft_alcohol_weekly.csv"),
           row.names = TRUE)
 
 
@@ -577,59 +594,63 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_21 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_23 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_chf)))
-diff_22 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_24 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_chf)))
-diff_23 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_25 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_chf)))
 
-create_volcano_plot(diff_21, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_23, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_chf__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_22, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_24, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_chf__chf.png"),
                     title = "Differentially expressed proteins - Chf")
-create_volcano_plot(diff_23, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_25, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_chf__frailty_chf.png"),
                     title = paste("Differentially expressed proteins -",
                                   "Frailty:Chf"))
 
-diff_21 <- diff_21[diff_21$adj.P.Val < 0.05, ]
-nrow(diff_21)
+diff_23 <- diff_23[diff_23$adj.P.Val < 0.05, ]
+nrow(diff_23)
 # A: 5
 # B: 22
-rownames(diff_21)
+rownames(diff_23)
 # A: "P06702" "A6KYJ0" "P05109" "A9KJL3" "A6L792"
 # B: "P06702" "P05109" "A9KJL3" "A6LPS3" "A6L4M1" "Q9Z9L6" "A6L0U5" "A9KMF6" "Q05650" "B2UYT8" "A9KNK6" "P33656" "Q5LHW2" "Q8A015" "A6L7J5" "Q5L8B5" "A6L792" "A9KRZ1" "A2RC28" "Q5LH68" "Q5WLM8" "Q8A477"
 
-diff_22 <- diff_22[diff_22$adj.P.Val < 0.05, ]
-nrow(diff_22)
+diff_24 <- diff_24[diff_24$adj.P.Val < 0.05, ]
+nrow(diff_24)
 # A: 0
 # B: 1
-rownames(diff_22)
+rownames(diff_24)
 # B: "A8F4S6"
 
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_22),
+prot_ann <- GetProteinAnnontate(rownames(diff_24),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_22_ann <- merge(diff_22, prot_ann, by = "row.names")
-row.names(diff_22_ann) <- diff_22_ann$Row.names
-diff_22_ann$Row.names <- NULL
+diff_24_ann <- merge(diff_24, prot_ann, by = "row.names")
+row.names(diff_24_ann) <- diff_24_ann$Row.names
+diff_24_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_24_ann <- diff_24_ann[order(diff_24_ann$adj.P.Val,
+                                 -abs(diff_24_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_chf.csv
-write.csv(diff_22_ann, file = paste0(output_file, "chf.csv"),
+write.csv(diff_24_ann, file = paste0(output_path, "chf.csv"),
           row.names = TRUE)
 
-diff_23 <- diff_23[diff_23$adj.P.Val < 0.05, ]
-nrow(diff_23)
+diff_25 <- diff_25[diff_25$adj.P.Val < 0.05, ]
+nrow(diff_25)
 # A: 0
 # B: 0
-rownames(diff_23)
+rownames(diff_25)
 
 # ==================================
 #   Frailty and af
@@ -650,74 +671,82 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_24 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_26 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_af)))
-diff_25 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_27 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_af)))
-diff_26 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_28 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_af)))
 
-create_volcano_plot(diff_24, save_path = paste0(plot_path, "volcano_plot_",
-                                                "frailty_af___frailty.png"),
+create_volcano_plot(diff_26, save_path = paste0(plot_path, "volcano_plot_",
+                                                "frailty_af__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_25, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_27, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_af__af.png"),
                     title = "Differentially expressed proteins - AF")
-create_volcano_plot(diff_26, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_28, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_af__frailty_af.png"),
                     title = paste("Differentially expressed proteins -",
                                   "Frailty:AF"))
 
-diff_24 <- diff_24[diff_24$adj.P.Val < 0.05, ]
-nrow(diff_24)
+diff_26 <- diff_26[diff_26$adj.P.Val < 0.05, ]
+nrow(diff_26)
 # A: 6
 # B: 24
-rownames(diff_24)
+rownames(diff_26)
 # A: "P06702" "A6L792" "A6KYJ0" "Q8A9M2" "A9KRZ4" "P05109"
 # B: "A9KJL3" "P06702" "P05109" "Q8A015" "Q05650" "A6L4M1" "A6L7J5" "A9KMF6" "A6L0U5" "Q9Z9L6" "A6KYG9" "B2UYT8" "A6LPS3" "P33656" "A6L792" "Q5LHW2" "Q5L8B5" "A9KRZ1" "A9KNK6" "Q8A477" "Q5WLM8" "A6L2R5" "Q5LH68" "A9KJI4" "C4Z2R3"
 
-diff_25 <- diff_25[diff_25$adj.P.Val < 0.05, ]
-nrow(diff_25)
+diff_27 <- diff_27[diff_27$adj.P.Val < 0.05, ]
+nrow(diff_27)
 # A: 0
 # B: 1
-rownames(diff_25)
+rownames(diff_27)
 # B: "Q2T0I7"
 
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_25),
+prot_ann <- GetProteinAnnontate(rownames(diff_27),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_25_ann <- merge(diff_25, prot_ann, by = "row.names")
-row.names(diff_25_ann) <- diff_25_ann$Row.names
-diff_25_ann$Row.names <- NULL
+diff_27_ann <- merge(diff_27, prot_ann, by = "row.names")
+row.names(diff_27_ann) <- diff_27_ann$Row.names
+diff_27_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_27_ann <- diff_27_ann[order(diff_27_ann$adj.P.Val,
+                                 -abs(diff_27_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_af.csv
-write.csv(diff_25_ann, file = paste0(output_file, "af.csv"),
+write.csv(diff_27_ann, file = paste0(output_path, "af.csv"),
           row.names = TRUE)
 
-diff_26 <- diff_26[diff_26$adj.P.Val < 0.05, ]
-nrow(diff_26)
+diff_28 <- diff_28[diff_28$adj.P.Val < 0.05, ]
+nrow(diff_28)
 # A: 0
 # B: 2
-rownames(diff_26)
+rownames(diff_28)
 # B: "Q2T0I7" "A6KYG9"
 
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_26),
+prot_ann <- GetProteinAnnontate(rownames(diff_28),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_26_ann <- merge(diff_26, prot_ann, by = "row.names")
-row.names(diff_26_ann) <- diff_26_ann$Row.names
-diff_26_ann$Row.names <- NULL
+diff_28_ann <- merge(diff_28, prot_ann, by = "row.names")
+row.names(diff_28_ann) <- diff_28_ann$Row.names
+diff_28_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_28_ann <- diff_28_ann[order(diff_28_ann$adj.P.Val,
+                                 -abs(diff_28_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_ft_af.csv
-write.csv(diff_26_ann, file = paste0(output_file, "ft_af.csv"),
+write.csv(diff_28_ann, file = paste0(output_path, "ft_af.csv"),
           row.names = TRUE)
 
 # ==================================
@@ -740,45 +769,45 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_27 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_29 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_osteo)))
-diff_28 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_30 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_osteo)))
-diff_29 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_31 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_osteo)))
 
-create_volcano_plot(diff_27, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_29, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_osteo__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_28, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_30, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_osteo__osteo.png"),
                     title = paste("Differentially expressed proteins",
                                   "- Osteoarthritis"))
-create_volcano_plot(diff_29, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_31, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_osteo__frailty_",
                                                 "osteo.png"),
                     title = paste("Differentially expressed proteins - ",
                                   "Frailty:Osteoarthritis"))
 
-diff_27 <- diff_27[diff_27$adj.P.Val < 0.05, ]
-nrow(diff_27)
+diff_29 <- diff_29[diff_29$adj.P.Val < 0.05, ]
+nrow(diff_29)
 # A: 13
 # B: 1
-rownames(diff_27)
+rownames(diff_29)
 # A: "A6KYJ4" "A9KJJ5" "P06702" "A6L792" "P05109" "A6L903" "Q5L8C5" "Q9AE24" "Q5L923" "A9KRZ4" "Q5LHW2" "A6L048" "Q8A9M2"
 # B: "Q8A015"
 
-diff_28 <- diff_28[diff_28$adj.P.Val < 0.05, ]
-nrow(diff_28)
+diff_30 <- diff_30[diff_30$adj.P.Val < 0.05, ]
+nrow(diff_30)
 # A: 0
 # B: 0
-rownames(diff_28)
+rownames(diff_30)
 
-diff_29 <- diff_29[diff_29$adj.P.Val < 0.05, ]
-nrow(diff_29)
+diff_31 <- diff_31[diff_31$adj.P.Val < 0.05, ]
+nrow(diff_31)
 # A: 0
 # B: 0
-rownames(diff_29)
+rownames(diff_31)
 
 # ==================================
 #   Frailty and hipfracture
@@ -800,76 +829,84 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_30 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_32 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_hip)))
-diff_31 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_33 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_hip)))
-diff_32 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_34 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_hip)))
 
-create_volcano_plot(diff_30, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_32, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_hip__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_31, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_33, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_hip__hip.png"),
                     title = paste("Differentially expressed proteins",
                                   "- Hip fracture"))
-create_volcano_plot(diff_32, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_34, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_hip__frailty_",
                                                 "hip.png"),
                     title = paste("Differentially expressed proteins - ",
                                   "Frailty:Hip fracture"))
 
-diff_30 <- diff_30[diff_30$adj.P.Val < 0.05, ]
-nrow(diff_30)
+diff_32 <- diff_32[diff_32$adj.P.Val < 0.05, ]
+nrow(diff_32)
 # A: 7
 # B: 21
-rownames(diff_30)
+rownames(diff_32)
 # A: "P06702" "A6L792" "P05109" "A6KYJ0" "A9KRZ4" "A6KYJ4" "P94360"
 # B: "P06702" "A9KJL3" "P05109" "P33656" "B2UYT8" "A6L0U5" "Q8A015" "Q05650" "A9KMF6" "A9KNC4" "A9KJI4" "A6L4M1" "A6LPS3" "A6L7J5" "Q5L8B5" "A9KNK6" "Q5LHW2" "Q9Z9L6" "C4Z2R3" "A9KRZ1" "Q8A477"
 
-diff_31 <- diff_31[diff_31$adj.P.Val < 0.05, ]
-nrow(diff_31)
+diff_33 <- diff_33[diff_33$adj.P.Val < 0.05, ]
+nrow(diff_33)
 # A: 0
 # B: 2
-rownames(diff_31)
+rownames(diff_33)
 # B: "Q3B6G3" "Q01523"
 
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_31),
+prot_ann <- GetProteinAnnontate(rownames(diff_33),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_31_ann <- merge(diff_31, prot_ann, by = "row.names")
-row.names(diff_31_ann) <- diff_31_ann$Row.names
-diff_31_ann$Row.names <- NULL
+diff_33_ann <- merge(diff_33, prot_ann, by = "row.names")
+row.names(diff_33_ann) <- diff_33_ann$Row.names
+diff_33_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_33_ann <- diff_33_ann[order(diff_33_ann$adj.P.Val,
+                                 -abs(diff_33_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_hip.csv
-write.csv(diff_31_ann, file = paste0(output_file, "hip.csv"),
+write.csv(diff_33_ann, file = paste0(output_path, "hip.csv"),
           row.names = TRUE)
 
-diff_32 <- diff_32[diff_32$adj.P.Val < 0.05, ]
-nrow(diff_32)
+diff_34 <- diff_34[diff_34$adj.P.Val < 0.05, ]
+nrow(diff_34)
 # A: 0
 # B: 1
-rownames(diff_32)
+rownames(diff_34)
 # B: "Q3B6G3"
 
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_32),
+prot_ann <- GetProteinAnnontate(rownames(diff_34),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_32_ann <- merge(diff_32, prot_ann, by = "row.names")
-row.names(diff_32_ann) <- diff_32_ann$Row.names
-diff_32_ann$Row.names <- NULL
+diff_34_ann <- merge(diff_34, prot_ann, by = "row.names")
+row.names(diff_34_ann) <- diff_34_ann$Row.names
+diff_34_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_34_ann <- diff_34_ann[order(diff_34_ann$adj.P.Val,
+                                 -abs(diff_34_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_ft_hip.csv
-write.csv(diff_32_ann, file = paste0(output_file, "ft_hip.csv"),
+write.csv(diff_34_ann, file = paste0(output_path, "ft_hip.csv"),
           row.names = TRUE)
 
 # ==================================
@@ -891,46 +928,46 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_33 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_35 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_depression)))
-diff_34 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_36 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_depression)))
-diff_35 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_37 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_depression)))
 
-create_volcano_plot(diff_33, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_35, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_depression__",
                                                 "frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_34, save_path = paste0(plot_path,"volcano_plot_",
+create_volcano_plot(diff_36, save_path = paste0(plot_path,"volcano_plot_",
                                                 "frailty_depression__",
                                                 "depression.png"),
                     title = "Differentially expressed proteins - Depression")
-create_volcano_plot(diff_35, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_37, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_depression__",
                                                 "frailty_depression.png"),
                     title = paste("Differentially expressed proteins - ",
                                   "Frailty:Depression"))
 
-diff_33 <- diff_33[diff_33$adj.P.Val < 0.05, ]
-nrow(diff_33)
+diff_35 <- diff_35[diff_35$adj.P.Val < 0.05, ]
+nrow(diff_35)
 # A: 5
 # B: 21
-rownames(diff_33)
+rownames(diff_35)
 # A: "A6KYJ0" "P06702" "A9KRZ4" "P05109" "A6L792"
 # B: "Q8A015" "A6L7J5" "P33656" "P05109" "Q9Z9L6" "A6L0U5" "A9KJL3" "A6LPS3" "P06702" "Q5LHW2" "Q5LH68" "B2UYT8" "A9KNK6" "A9KMF6" "A6LEJ1" "Q05650" "Q8A477" "A6L4M1" "A6KYJ0" "A9KNC4" "Q05203"
 
-diff_34 <- diff_34[diff_34$adj.P.Val < 0.05, ]
-nrow(diff_34) 
+diff_36 <- diff_36[diff_36$adj.P.Val < 0.05, ]
+nrow(diff_36) 
 # A: 0
 # B: 0
-rownames(diff_34)
+rownames(diff_36)
 
-diff_35 <- diff_35[diff_35$adj.P.Val < 0.05, ]
-nrow(diff_35)
+diff_37 <- diff_37[diff_37$adj.P.Val < 0.05, ]
+nrow(diff_37)
 # A: 0
 # B: 0
-rownames(diff_35)
+rownames(diff_37)
 
 # ==================================
 #   Frailty and sarcopenia
@@ -951,60 +988,67 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_36 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_38 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_sarco)))
-diff_37 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_39 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_sarco)))
-diff_38 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_40 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_sarco)))
 
-create_volcano_plot(diff_36, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_38, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_sarco__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_37, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_39, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_sarco__sarco.png"),
                     title = "Differentially expressed proteins - Sarcopenia")
-create_volcano_plot(diff_38, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_40, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_sarco__",
                                                 "frailty_sarco.png"),
                     title = paste("Differentially expressed proteins - ",
                                   "Frailty:Sarcopenia"))
 
-diff_36 <- diff_36[diff_36$adj.P.Val < 0.05, ]
-nrow(diff_36)
+diff_38 <- diff_38[diff_38$adj.P.Val < 0.05, ]
+nrow(diff_38)
 # A: 8
 # B: 10
-rownames(diff_36)
+rownames(diff_38)
 # A: "P06702" "A6KYJ0" "P05109" "A9KJL3" "O83023" "P94360" "A6L792" "C4Z2R3"
 # B: "P05109" "P06702" "A9KJL3" "Q05650" "A6L7J5" "C4Z2R3" "B2UYT8" "Q9Z9L6" "A9KMF6" "A9KNC4"
 
-diff_37 <- diff_37[diff_37$adj.P.Val < 0.05, ]
-nrow(diff_37)
+diff_39 <- diff_39[diff_39$adj.P.Val < 0.05, ]
+nrow(diff_39)
 # A: 0
 # B: 0
-rownames(diff_37)
+rownames(diff_39)
 
-diff_38 <- diff_38[diff_38$adj.P.Val < 0.05, ]
-nrow(diff_38)
+diff_40 <- diff_40[diff_40$adj.P.Val < 0.05, ]
+nrow(diff_40)
 # A: 1
 # B: 3
-rownames(diff_38)
+rownames(diff_40)
 # A: "A6KYK7"
 # B: "Q5L9E3" "A9KJI8" "A9KK94"
 
+diff_40 <- diff_40[!grepl("^NA(\\.|$)", rownames(diff_40)), ]
+
+
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_38),
+prot_ann <- GetProteinAnnontate(rownames(diff_40),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_38_ann <- merge(diff_38, prot_ann, by = "row.names")
-row.names(diff_38_ann) <- diff_38_ann$Row.names
-diff_38_ann$Row.names <- NULL
+diff_40_ann <- merge(diff_40, prot_ann, by = "row.names")
+row.names(diff_40_ann) <- diff_40_ann$Row.names
+diff_40_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_40_ann <- diff_40_ann[order(diff_40_ann$adj.P.Val,
+                                 -abs(diff_40_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_ft_sarco.csv
-write.csv(diff_38_ann, file = paste0(output_file, "ft_sarco.csv"),
+write.csv(diff_40_ann, file = paste0(output_path, "ft_sarco.csv"),
           row.names = TRUE)
 
 sel0 = which("A6KYK7"==rownames(assay(se_no_imp_sarco)))
@@ -1033,43 +1077,43 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_39 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_41 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_ilef)))
-diff_40 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_42 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_ilef)))
-diff_41 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_43 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_ilef)))
 
-create_volcano_plot(diff_39, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_41, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_ilef__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_40, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_42, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_ilef__ilef.png"),
                     title = "Differentially expressed proteins - ILEF")
-create_volcano_plot(diff_41, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_43, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_ilef__frailty_",
                                                 "ilef.png"),
                     title = "Differentially expressed proteins - Frailty:ILEF")
 
-diff_39 <- diff_39[diff_39$adj.P.Val < 0.05, ]
-nrow(diff_39)
+diff_41 <- diff_41[diff_41$adj.P.Val < 0.05, ]
+nrow(diff_41)
 # A: 2
 # B: 2
-rownames(diff_39)
+rownames(diff_41)
 # A: "A6KYJ0" "A6L792"
 # B: "P05109" "P06702"
 
-diff_40 <- diff_40[diff_40$adj.P.Val < 0.05, ]
-nrow(diff_40)
+diff_42 <- diff_42[diff_42$adj.P.Val < 0.05, ]
+nrow(diff_42)
 # A: 0
 # B: 0
-rownames(diff_40)
+rownames(diff_42)
 
-diff_41 <- diff_41[diff_41$adj.P.Val < 0.05, ]
-nrow(diff_41)
+diff_43 <- diff_43[diff_43$adj.P.Val < 0.05, ]
+nrow(diff_43)
 # A: 0
 # B: 0
-rownames(diff_41)
+rownames(diff_43)
 
 # ==================================
 #   Frailty and age
@@ -1090,42 +1134,42 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_42 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_44 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_age)))
-diff_43 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_45 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_age)))
-diff_44 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_46 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_age)))
 
-create_volcano_plot(diff_42, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_44, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_age__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_43, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_45, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_age__age.png"),
                     title = "Differentially expressed proteins- Age")
-create_volcano_plot(diff_44, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_46, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_age__frailty_age.png"),
                     title = paste("Differentially expressed proteins - ",
                                   "Frailty:age"))
 
-diff_42 <- diff_42[diff_42$adj.P.Val < 0.05, ]
-nrow(diff_42)
-# A: 2
-# B: 0
-rownames(diff_42)
-# A: "A6KYJ0" "A6L792"
-
-diff_43 <- diff_43[diff_43$adj.P.Val < 0.05, ]
-nrow(diff_43)
-# A: 0
-# B: 0
-rownames(diff_43)
-
 diff_44 <- diff_44[diff_44$adj.P.Val < 0.05, ]
 nrow(diff_44)
-# A: 0
+# A: 2 -> 0
 # B: 0
 rownames(diff_44)
+# A: "A6KYJ0" "A6L792"
+
+diff_45 <- diff_45[diff_45$adj.P.Val < 0.05, ]
+nrow(diff_45)
+# A: 0
+# B: 0
+rownames(diff_45)
+
+diff_46 <- diff_46[diff_46$adj.P.Val < 0.05, ]
+nrow(diff_46)
+# A: 0
+# B: 0
+rownames(diff_46)
 
 # ==================================
 #   Frailty and MEDAS
@@ -1146,37 +1190,24 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_45 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_47 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_medas)))
-diff_46 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_48 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_medas)))
-diff_47 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_49 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_medas)))
 
-create_volcano_plot(diff_45, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_47, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_medas__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_46, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_48, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_medas__medas.png"),
                     title = "Differentially expressed proteins- MEDAS")
-create_volcano_plot(diff_47, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_49, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_medas__frailty_",
                                                 "medas.png"),
                     title = paste("Differentially expressed proteins - ",
                                   "Frailty:MEDAS"))
-
-diff_45 <- diff_45[diff_45$adj.P.Val < 0.05, ]
-nrow(diff_45)
-# A: 1
-# B: 0
-rownames(diff_45)
-# A: "C4Z2V8"
-
-diff_46 <- diff_46[diff_46$adj.P.Val < 0.05, ]
-nrow(diff_46)
-# A: 0
-# B: 0
-rownames(diff_46)
 
 diff_47 <- diff_47[diff_47$adj.P.Val < 0.05, ]
 nrow(diff_47)
@@ -1185,19 +1216,36 @@ nrow(diff_47)
 rownames(diff_47)
 # A: "C4Z2V8"
 
+diff_48 <- diff_48[diff_48$adj.P.Val < 0.05, ]
+nrow(diff_48)
+# A: 0
+# B: 0
+rownames(diff_48)
+
+diff_49 <- diff_49[diff_49$adj.P.Val < 0.05, ]
+nrow(diff_49)
+# A: 1
+# B: 0
+rownames(diff_49)
+# A: "C4Z2V8"
+
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_47),
+prot_ann <- GetProteinAnnontate(rownames(diff_49),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_47_ann <- merge(diff_47, prot_ann, by = "row.names")
-row.names(diff_47_ann) <- diff_47_ann$Row.names
-diff_47_ann$Row.names <- NULL
+diff_49_ann <- merge(diff_49, prot_ann, by = "row.names")
+row.names(diff_49_ann) <- diff_49_ann$Row.names
+diff_49_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_49_ann <- diff_49_ann[order(diff_49_ann$adj.P.Val,
+                                 -abs(diff_49_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_ft_medas.csv
-write.csv(diff_47_ann, file = paste0(output_file, "ft_medas.csv"),
+write.csv(diff_49_ann, file = paste0(output_path, "ft_medas.csv"),
           row.names = TRUE)
 
 sel0 = which("C4Z2V8"==rownames(assay(se_no_imp_medas)))
@@ -1227,42 +1275,42 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_48 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_50 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_energy)))
-diff_49 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_51 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_energy)))
-diff_50 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_52 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_energy)))
 
-create_volcano_plot(diff_48, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_50, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_energy__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_49, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_51, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_energy__energy.png"),
                     title = "Differentially expressed proteins - Energy")
-create_volcano_plot(diff_50, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_52, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_energy__frailty_",
                                                 "energy.png"),
                     title = paste("Differentially expressed proteins -",
                                   "Frailty:energy"))
-
-diff_48 <- diff_48[diff_48$adj.P.Val < 0.05, ]
-nrow(diff_48)
-# A: 0
-# B: 0
-rownames(diff_48)
-
-diff_49 <- diff_49[diff_49$adj.P.Val < 0.05, ]
-nrow(diff_49)
-# A: 0
-# B: 0
-rownames(diff_49)
 
 diff_50 <- diff_50[diff_50$adj.P.Val < 0.05, ]
 nrow(diff_50)
 # A: 0
 # B: 0
 rownames(diff_50)
+
+diff_51 <- diff_51[diff_51$adj.P.Val < 0.05, ]
+nrow(diff_51)
+# A: 0
+# B: 0
+rownames(diff_51)
+
+diff_52 <- diff_52[diff_52$adj.P.Val < 0.05, ]
+nrow(diff_52)
+# A: 0
+# B: 0
+rownames(diff_52)
 
 # ==================================
 #   Frailty and bmi
@@ -1283,55 +1331,59 @@ fit1 = eBayes(fit)
 head(coef(fit1))
 
 # 4 coefficients per each column of model matrix. Adjusted using BH
-diff_51 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
+diff_53 <- topTable(fit1,coef=2, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_bmi)))
-diff_52 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
+diff_54 <- topTable(fit1,coef=3, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_bmi)))
-diff_53 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
+diff_55 <- topTable(fit1,coef=4, adjust ="BH", sort.by="P",
                     number=nrow(assay(se_no_imp_bmi)))
 
-create_volcano_plot(diff_51, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_53, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_bmi__frailty.png"),
                     title = "Differentially expressed proteins - Frailty")
-create_volcano_plot(diff_52, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_54, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_bmi__bmi.png"),
                     title = "Differentially expressed proteins - BMI")
-create_volcano_plot(diff_53, save_path = paste0(plot_path, "volcano_plot_",
+create_volcano_plot(diff_55, save_path = paste0(plot_path, "volcano_plot_",
                                                 "frailty_bmi__frailty_bmi.png"),
                     title = paste("Differentially expressed proteins -",
                                   "Frailty:BMI"))
 
-diff_51 <- diff_51[diff_51$adj.P.Val < 0.05, ]
-nrow(diff_51)
-# A: 0
-# B: 4
-rownames(diff_51)
-# B: "P9WQH6" "E1WS50" "A6L048" "Q8WWA0"
-
-diff_52 <- diff_52[diff_52$adj.P.Val < 0.05, ]
-nrow(diff_52)
-# A: 0
-# B: 0
-rownames(diff_52)
-
 diff_53 <- diff_53[diff_53$adj.P.Val < 0.05, ]
 nrow(diff_53)
 # A: 0
-# B: 3
+# B: 4
 rownames(diff_53)
+# B: "P9WQH6" "E1WS50" "A6L048" "Q8WWA0"
+
+diff_54 <- diff_54[diff_54$adj.P.Val < 0.05, ]
+nrow(diff_54)
+# A: 0
+# B: 0
+rownames(diff_54)
+
+diff_55 <- diff_55[diff_55$adj.P.Val < 0.05, ]
+nrow(diff_55)
+# A: 0
+# B: 3
+rownames(diff_55)
 # B: "E1WS50" "P9WQH6" "A6L048"
 
 # Get annotation from Uniprot
-prot_ann <- GetProteinAnnontate(rownames(diff_53),
+prot_ann <- GetProteinAnnontate(rownames(diff_55),
                                 columns = c("gene_primary", "organism_name",
                                             "protein_name", "cc_function",
                                             "keyword","go_p", "go_c", "go_f"))
 colnames(prot_ann) <- c("gene_primary", "organism_name", "protein_name",
                         "cc_function", "keyword","go_p", "go_c", "go_f")
-diff_53_ann <- merge(diff_53, prot_ann, by = "row.names")
-row.names(diff_53_ann) <- diff_53_ann$Row.names
-diff_53_ann$Row.names <- NULL
+diff_55_ann <- merge(diff_55, prot_ann, by = "row.names")
+row.names(diff_55_ann) <- diff_55_ann$Row.names
+diff_55_ann$Row.names <- NULL
+
+# Order by adj.P.Val and logFC
+diff_55_ann <- diff_55_ann[order(diff_55_ann$adj.P.Val,
+                                 -abs(diff_55_ann$logFC)), ]
 
 # Save sig_prot_no_imp_(max)lfq_ft_bmi.csv
-write.csv(diff_53_ann, file = paste0(output_file, "ft_bmi.csv"),
+write.csv(diff_55_ann, file = paste0(output_path, "ft_bmi.csv"),
           row.names = TRUE)
