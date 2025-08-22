@@ -10,7 +10,8 @@ library(data.table)
 work_path <- getwd()
 
 # Read core_pep_kegg_db.csv
-core_pep_kegg_db <- fread(paste0(work_path, "/psva/core_pep_kegg_db_2.csv"),
+core_pep_kegg_db <- fread(paste0(work_path,
+                                 "/psva/data/core_pep_kegg_db_2.csv"),
                           sep = ",", header = TRUE) %>%
   select(Peptide, Protein, ID, KO)
 
@@ -49,6 +50,5 @@ save(count_core_pep_ko_db,
      file = paste0(work_path, "/psva/data/count_core_pep_ko_db_2.RData"))
 
 # Save peptide-KO-count dataset as csv file
-write.csv(count_core_pep_ko_db, file = paste0(work_path,
-                                              "/psva/count_core_pep_ko_db_2.csv"))
-print("count_core_pep_ko_db_2.csv saved.")
+write.csv(count_core_pep_ko_db,
+          file = paste0(work_path,"/psva/data/count_core_pep_ko_db_2.csv"))

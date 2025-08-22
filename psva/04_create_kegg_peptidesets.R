@@ -11,9 +11,6 @@ load(paste0(work_path, "/psva/data/kegg_ko_l3_4.RData"))
 # Load count_core_pep_ko_db_2
 load(paste0(work_path, "/psva/data/count_core_pep_ko_db_2.RData"))
 
-# Unique pathways vector
-# l3 <- ko_df$L3_DESC %>% unique()
-
 # Group ko by pathways
 l4_3 <- dlply(ko_df %>% select(L3_DESC, L4),
                       .(L3_DESC))
@@ -35,5 +32,3 @@ sum(sapply(kegg_pepsets, function(x) length(x) > 0))
 
 # Save kegg_pepsets
 save(kegg_pepsets, file = paste0(work_path, "/psva/data/kegg_pepsets.RData"))
-
-print("kegg_pepsets.RData saved.")

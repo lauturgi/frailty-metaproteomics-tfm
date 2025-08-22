@@ -19,14 +19,14 @@ create_volcano_plot <- function(diff, sig = 0.05, fold = 0.7,
   # Generate the plot
   g <- ggplot(data = diff, aes(x = logFC, y = -log10(adj.P.Val),
                                colour = diff.exp)) +
-    geom_point(alpha = 0.8, size = 0.8) +
+    geom_point(alpha = 0.8, size = 1) +
     scale_colour_manual(values = c("Not significant" = "gray", 
                                    "Significant" = "green", 
                                    "Up" = "red", 
                                    "Down" = "blue")) +
     coord_cartesian(
-      xlim = c(-1, 1) * (max(abs(diff$logFC), na.rm = TRUE) + 1),
-      ylim = c(0, max(-log10(diff$adj.P.Val), na.rm = TRUE) + 0.5)
+      xlim = c(-4, 4),  #c(-1, 1) * (max(abs(diff$logFC), na.rm = TRUE) + 1),
+      ylim = c(0, 2)  #c(0, max(-log10(diff$adj.P.Val), na.rm = TRUE) + 0.5)
     ) +
     xlab("logFC") +
     ylab("-log10 adjusted p-value") +
@@ -35,7 +35,7 @@ create_volcano_plot <- function(diff, sig = 0.05, fold = 0.7,
     theme(legend.title = element_blank()) + 
     geom_vline(xintercept = c(-fold, fold), colour = "black", size = 0.2) +
     geom_hline(yintercept = -log10(sig), colour = "black", size = 0.2) +
-    geom_text_repel(aes(label = label), size = 2, na.rm = TRUE, color = "black")
+    geom_text_repel(aes(label = label), size = 2.5, na.rm = TRUE, color = "black")
   
   # Print the plot
   print(g)
