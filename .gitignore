@@ -1,9 +1,8 @@
 .Rproj.user
 .Rhistory
-*.RData
+.RData
 .Ruserdata
-*.dmnd
-*.dat
-*.png
-*.html
-*plots*
+renv/library
+plots/
+data/
+output/
