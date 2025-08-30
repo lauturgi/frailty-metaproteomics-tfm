@@ -1,5 +1,18 @@
 # Identification of bacterial protein markers associated with frailty
 
+## Environment set up
+R version used was **4.4.2**
+
+This project uses `renv` to reproduce the R package environment.
+
+1. Install `renv` if not already installed:
+```r
+install.packages("renv")
+```
+2. Restore the environment from `renv.lock`:
+```r
+renv::restore()
+```
 ## Metadata descriptive analysis
 1. Create the following directories:
   - `data/`
